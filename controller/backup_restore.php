@@ -27,6 +27,7 @@ class backup_restore extends fs_controller {
    const path = "tmp/" . FS_TMP_NAME . "/sql_backups";
 
    public $files;
+   public $fileSize;
 
    public function __construct() {
       parent::__construct(__CLASS__, 'Cópias de seguridad', 'admin', FALSE, TRUE);
@@ -37,20 +38,38 @@ class backup_restore extends fs_controller {
          mkdir(self::path);
       }
 
-      $files = $this->getFiles(self::path);
-
-      if (isset($_GET['nueva'])) {
-         $manager = require 'plugins/backup_restore/config/bootstrap.php';
-         // backup
-         $manager->makeBackup()->run(
-            'production', 
-            [new Destination('local', self::path . '/backup_' . date('d-m-Y_H:i:s') . '.sql')],
-            'gzip'
-         );
+      if (substr(sprintf('%o', fileperms(self::path)), -4) != "0777") {
+         if (!chmod(self::path, 0777)) {
+            $this->new_error_msg('La carpeta ' . self::path . ' necesita permisos 777 y no se han podido aplicar automáticamente.');
+         }
       }
 
-      //restore
-//      $manager->makeRestore()->run('local', 'tmp/sql_backups/backup_'.date('d-m-Y_H:i:s').'.sql.gz', 'production', 'gzip');
+      $files = $this->getFiles(self::path);
+      //$fileSize = $this->getSize($files);
+
+      if (isset($_GET['nueva']) AND ! empty($_GET['nueva'])) {
+         $manager = require 'plugins/backup_restore/config/bootstrap.php';
+         $file = self::path . '/backup_' . date('d-m-Y_H:i:s') . '.sql';
+         $manager->makeBackup()->run(
+                 'production', [new Destination('local', $file)], 'gzip'
+         );
+         if (file_exists($file.'.gz')) {
+            $this->new_message("Copia '" . $file . ".gz' creada correctamente.");
+         } else {
+            $this->new_error_msg("No se ha podido realizar la copia '" . $file . ".gz'");
+         }
+      } else if (isset($_GET['restaurar']) AND ! empty($_GET['restaurar'])) {
+         if (file_exists($_GET['restaurar'])) {
+            //restore
+            //$manager->makeRestore()->run('local', 'tmp/sql_backups/backup_'.date('d-m-Y_H:i:s').'.sql.gz', 'production', 'gzip');
+         } else {
+            // El archivo no existe
+         }
+      }
+   }
+
+   public function url() {
+      return parent::url();
    }
 
    private function getFiles($dir) {
@@ -68,8 +87,17 @@ class backup_restore extends fs_controller {
       return $result;
    }
 
-   public function url() {
-      return parent::url();
+   private function getSize($files) {
+      $result = array();
+      foreach ($files as $file) {
+         $bytes = filesize($file);
+         $decimals = 2;
+         $sz = array('B', 'K', 'M', 'G', 'T', 'P');
+         $factor = floor((strlen($bytes) - 1) / 3);
+         $result[] = sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $sz[$factor];
+      }
+
+      return $result;
    }
 
 }

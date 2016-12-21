@@ -9,6 +9,9 @@
             <a type="button" class="btn btn-primary" aria-label="Nueva cópia" href="{$fsc->url()}&nueva=true">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
             </a>
+            <a type="button" class="btn btn-success" aria-label="Importar" href="{$fsc->url()}">
+                <span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span>
+            </a>
         </div>
     </div>
     <div class="row">
@@ -25,13 +28,14 @@
             </thead>
             {loop="$fsc->files"}
             <tr>
-                <td class="text-left">{$value[i]}</td>
-                <td class="text-left">Size</td>
+                <td class="text-left">{$value[$counter]}</td>
+                <!--<td class="text-left">{$fileSize[$counter]}</td>-->
+                <td class="text-left">FileSize</td>
                 <td class="text-left">Date</td>
                 <td class="text-left"></td>
                 <td class="text-left">
                     <button type="button" class="btn btn-primary" aria-label="Descargar">
-                        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                        <span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>
                     </button>
                 </td>
                 <td class="text-left">
