@@ -1,0 +1,54 @@
+{include="header"}
+
+<div class="container-fluid" style="margin-top: 10px;">
+    <div class="row">
+        <div class="col-xs-8">
+            <h3>Cópias de seguridad</h3>
+        </div>
+        <div class="col-xs-4 text-right">
+            <a type="button" class="btn btn-primary" aria-label="Nueva cópia" href="{$fsc->url()}&nueva=true">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            </a>
+        </div>
+    </div>
+    <div class="row">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Tamaño</th>
+                    <th>Fecha</th>
+                    <th>Restaurar</th>
+                    <th>Descargar</th>
+                    <th>Eliminar</th>
+                </tr>
+            </thead>
+            {loop="$fsc->files"}
+            <tr>
+                <td class="text-left">{$value[i]}</td>
+                <td class="text-left">Size</td>
+                <td class="text-left">Date</td>
+                <td class="text-left"></td>
+                <td class="text-left">
+                    <button type="button" class="btn btn-primary" aria-label="Descargar">
+                        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                    </button>
+                </td>
+                <td class="text-left">
+                    <button type="button" class="btn btn-primary" aria-label="Eliminar">
+                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                    </button>
+                </td>
+            </tr>
+            {else}
+            <tr  class="bg-warning">
+                <td colspan="6">
+                    No se ha encontrado ningún archivo.
+                </td>
+            </tr>
+            {/loop}
+        </table>
+    </div>
+</div>
+
+{include="footer"}
