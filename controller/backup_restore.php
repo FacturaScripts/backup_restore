@@ -37,16 +37,23 @@ class backup_restore extends fs_controller {
          mkdir(self::path);
       }
 
-      $files = $this->getFiles(self::path);
+      $this->files = $this->getFiles(self::path);
 
       if (isset($_GET['nueva'])) {
          $manager = require 'plugins/backup_restore/config/bootstrap.php';
-         // backup
-         $manager->makeBackup()->run(
-            'production', 
-            [new Destination('local', self::path . '/backup_' . date('d-m-Y_H:i:s') . '.sql')],
-            'gzip'
-         );
+         try {
+            // backup
+            $manager->makeBackup()->run(
+               'production',
+               [new Destination('local', self::path . '/backup_' . date('d-m-Y_H:i:s') . '.sql')],
+               'gzip'
+            );
+         } catch (Exception $e){
+             $this->new_error_msg('Ocurrio un error interno al intentar crear el backup:');
+             $this->new_error_msg($e->getMessage());
+             $this->new_error_msg($e->getTraceAsString());
+         }
+
       }
 
       //restore

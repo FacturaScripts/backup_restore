@@ -1,7 +1,5 @@
 <?php
 
-require_once 'config.php';
-
 return [
     'production' => [
         'type' => FS_DB_TYPE,
