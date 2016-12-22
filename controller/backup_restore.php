@@ -18,14 +18,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once 'plugins/backup_restore/vendor/autoload.php';
+require_once 'plugins/backup_restore/vendor2/Artesanik/DatabaseManager.php';
 
-use BackupManager\Filesystems\Destination;
+use Artesanik\DatabaseManager;
 
 class backup_restore extends fs_controller {
 
-   const path = "tmp/" . FS_TMP_NAME . "/sql_backups";
-
+   const path = "tmp/sql_backups";
    public $files;
 
    public function __construct() {
@@ -40,14 +39,31 @@ class backup_restore extends fs_controller {
       $this->files = $this->getFiles(self::path);
 
       if (isset($_GET['nueva'])) {
-         $manager = require 'plugins/backup_restore/config/bootstrap.php';
+         $manager = new DatabaseManager([
+            'dbms' => FS_DB_TYPE,
+            'host' => FS_DB_HOST,
+            'port' => FS_DB_PORT,
+            'user' => FS_DB_USER,
+            'pass' => FS_DB_PASS,
+            'dbname' => FS_DB_NAME,
+            'root' => '/tmp',
+            'backupdir' => ""
+        ]);
+
          try {
             // backup
-            $manager->makeBackup()->run(
+            $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
+            require_once 'plugins/backup_restore/vendor2/Artesanik/DbProcess/'.$dbInterface.'Process.php';
+            $backup = $manager->createBackup();
+            $this->new_message('Backup realizado correctamente: '.$backup);
+             /*
+             $manager->makeBackup()->run(
                'production',
                [new Destination('local', self::path . '/backup_' . date('d-m-Y_H:i:s') . '.sql')],
                'gzip'
             );
+             *
+             */
          } catch (Exception $e){
              $this->new_error_msg('Ocurrio un error interno al intentar crear el backup:');
              $this->new_error_msg($e->getMessage());
