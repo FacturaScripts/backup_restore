@@ -24,7 +24,7 @@ use BackupManager\Filesystems\Destination;
 
 class backup_restore extends fs_controller {
 
-   const path = "tmp/" . FS_TMP_NAME . "/sql_backups";
+   const path = "tmp/" . FS_TMP_NAME . "sql_backups";
 
    public $files;
    public $fileSize;
@@ -44,16 +44,31 @@ class backup_restore extends fs_controller {
          }
       }
 
+      if (FS_DB_TYPE == "MYSQL") {
+         $this->new_advice('DEBUG: Estás utilizando MySQL.');
+         $this->new_advice($this->command_exists('mysqldump')? 'DEBUG: mysqldump disponible' : 'DEBUG: mysqldump no disponible');
+      } else if (FS_DB_TYPE == "POSTGRESQL") {
+         $this->new_advice('DEBUG: Estás utilizando PostgreSQL.');
+         $this->new_advice($this->command_exists('pg_dump')? 'DEBUG: pg_dump disponible' : 'DEBUG: pg_dump no disponible');
+      }
+
       $files = $this->getFiles(self::path);
       //$fileSize = $this->getSize($files);
 
       if (isset($_GET['nueva']) AND ! empty($_GET['nueva'])) {
          $manager = require 'plugins/backup_restore/config/bootstrap.php';
-         $file = self::path . '/backup_' . date('d-m-Y_H:i:s') . '.sql';
-         $manager->makeBackup()->run(
-                 'production', [new Destination('local', $file)], 'gzip'
-         );
-         if (file_exists($file.'.gz')) {
+         $file = self::path . '/backup_' . date('d-m-Y_H-i-s') . '.sql';
+         $manager->makeBackup()->run('production', [
+             new Destination('local', $file)
+                 ], 'gzip');
+
+         if (file_exists($file)) {
+            $this->new_message("Copia '" . $file . "' creada correctamente.");
+         } else {
+            $this->new_error_msg("No se ha podido realizar la copia '" . $file . "'");
+         }
+
+         if (file_exists($file . '.gz')) {
             $this->new_message("Copia '" . $file . ".gz' creada correctamente.");
          } else {
             $this->new_error_msg("No se ha podido realizar la copia '" . $file . ".gz'");
@@ -98,6 +113,29 @@ class backup_restore extends fs_controller {
       }
 
       return $result;
+   }
+
+   private function command_exists($command) {
+      $whereIsCommand = (PHP_OS == 'WINNT') ? 'where' : 'which';
+
+      $process = proc_open(
+              "$whereIsCommand $command", array(
+          0 => array("pipe", "r"), //STDIN
+          1 => array("pipe", "w"), //STDOUT
+          2 => array("pipe", "w"), //STDERR
+              ), $pipes
+      );
+      if ($process !== false) {
+         $stdout = stream_get_contents($pipes[1]);
+         $stderr = stream_get_contents($pipes[2]);
+         fclose($pipes[1]);
+         fclose($pipes[2]);
+         proc_close($process);
+
+         return $stdout != '';
+      }
+
+      return false;
    }
 
 }
