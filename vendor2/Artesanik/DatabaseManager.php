@@ -65,7 +65,7 @@ class DatabaseManager {
         $this->sec = "00";
     }
 
-    public function createBackup(){
+    public function createBackup($tipo){
         switch($this->dbms){
             case "MYSQL":
                 $dbHandler = new MysqlProcess;
@@ -76,7 +76,7 @@ class DatabaseManager {
             default:
                 break;
         }
-        $resultado = $dbHandler->createBackup($this);
+        $resultado = $dbHandler->createBackup($this,$tipo);
         return $resultado;
     }
 

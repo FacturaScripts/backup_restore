@@ -54,7 +54,7 @@ class backup_restore extends fs_controller {
             // backup
             $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
             require_once 'plugins/backup_restore/vendor2/Artesanik/DbProcess/'.$dbInterface.'Process.php';
-            $backup = $manager->createBackup();
+            $backup = $manager->createBackup('full');
             $this->new_message('Backup realizado correctamente: '.$backup);
              /*
              $manager->makeBackup()->run(
