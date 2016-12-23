@@ -61,7 +61,8 @@ class PostgresqlProcess {
     public function createBackup($db,$type='full'){
         if($db->dbname){
             $this->conn = $this->connectDB($db);
-            $this->filename = $this->tempdir.'lista_tablas.csv';
+            $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
+            $this->filename = $this->tempdir.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
             if($type=='full'){
                 return $this->fullBackup();
             }elseif($type=='tablas'){
@@ -77,7 +78,6 @@ class PostgresqlProcess {
         $lista = $this->tableList();
         if($lista){
             foreach($lista as $t){
-                $datosTabla = array();
                 $listaColumnas = array();
                 //Creamos la estructura de la tabla
                 fputs($this->file, sprintf("CREATE TABLE IF NOT EXISTS %s (\n\r",$t['table_name']), 1024);
@@ -86,20 +86,22 @@ class PostgresqlProcess {
                     fputs($this->file, sprintf("%s",$this->constructColumn($column)), 1024);
                 }
                 fputs($this->file, sprintf(");\n\r"),1024);
+                //Copiamos la información de la tabla
                 fputs($this->file, sprintf("COPY %s (%s) FROM stdin;\n\r",$t['table_name'], implode(",",$listaColumnas)),1024);
                 $datosTabla = $this->conn->pgsqlCopyToArray($t['table_name'],"\t","\\N",implode(",",$listaColumnas));
                 foreach($datosTabla as $datos){
                     fputs($this->file, sprintf("%s\n\r",$datos),1024);
                 }
                 fputs($this->file, sprintf("\.\n\r"),1024);
-                //echo "<br/><br/>";
-                if($t['table_name']=='fs_users'){
-                    //print_r($datosTabla);
-                }
-
             }
             fclose($this->file);
-            return $this->filename;
+            //Comprimimos el Backup y lo mandamos a su detino
+            $zip = new \ZipArchive();
+            $zip->open($this->destino, \ZipArchive::CREATE);
+            $zip->addFile($this->filename);
+            $zip->close();
+            unlink($this->filename);
+            return $this->destino;
         }else{
             return false;
         }

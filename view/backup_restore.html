@@ -29,18 +29,18 @@
             </thead>
             {loop="$fsc->files"}
             <tr>
-                <td class="text-left">{$value[i]}</td>
-                <td class="text-left">Size</td>
-                <td class="text-left">Date</td>
-                <td class="text-left"></td>
+                <td class="text-left">{$value->filename}</td>
+                <td class="text-left">{$value->size}</td>
+                <td class="text-left">{$value->date}</td>
+                <td class="text-left"><button type="button" class="btn  btn-success btn-sm"><span class="fa fa-undo"></span>  Restaurar</button></td>
                 <td class="text-left">
-                    <button type="button" class="btn btn-primary" aria-label="Descargar">
+                    <a href="{#FS_PATH#}{$fsc->path}/{$value->filename}" class="btn btn-primary" aria-label="Descargar">
                         <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                    </button>
+                    </a>
                 </td>
                 <td class="text-left">
-                    <button type="button" class="btn btn-primary" aria-label="Eliminar">
-                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                    <button type="button" class="btn btn-danger" aria-label="Eliminar">
+                        <span class="fa fa-trash" aria-hidden="true"></span>
                     </button>
                 </td>
             </tr>
