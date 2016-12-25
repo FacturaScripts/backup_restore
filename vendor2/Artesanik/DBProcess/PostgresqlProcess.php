@@ -58,6 +58,21 @@ class PostgresqlProcess {
         return $conn;
     }
 
+    public function createSystemBackup($db){
+        if($db->dbname){
+            $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
+            $this->filename = $this->tempdir.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
+            exec("export PGPASSWORD={$db->pass} | export PGUSER={$db->user} | {$db->command} -h {$db->host} -U {$db->user} {$db->dbname} -b > {$this->filename} 2>&1 | unset PGPASSWORD | unset PGUSER",$cmdout);
+            //Comprimimos el Backup y lo mandamos a su detino
+            $zip = new \ZipArchive();
+            $zip->open($this->destino, \ZipArchive::CREATE);
+            $zip->addFile($this->filename);
+            $zip->close();
+            unlink($this->filename);
+            return $this->destino;
+        }
+    }
+
     public function createBackup($db,$type='full'){
         if($db->dbname){
             $this->conn = $this->connectDB($db);

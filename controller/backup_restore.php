@@ -26,17 +26,48 @@ class backup_restore extends fs_controller {
 
    const path = "sql_backups";
    public $files;
+   public $fsvar;
    public $basepath;
    public $path;
+   public $backup_comando;
+   public $backup_setup;
+   public $db_version;
    public function __construct() {
       parent::__construct(__CLASS__, 'Cópias de seguridad', 'admin', FALSE, TRUE);
 
    }
 
    protected function private_core() {
+      $this->db_version = $this->db->version();
+      $this->fsvar = new fs_var();
+      //Inicializamos la configuracion
+      $this->backup_setup = $this->fsvar->array_get(
+          array(
+             'backup_comando' => '',
+          ), TRUE
+      );
       if (!file_exists(self::path)) {
          mkdir(self::path);
       }
+      //Buscamos el comando de backup en las rutas normales
+      $this->configurar();
+      $accion = filter_input(INPUT_POST, 'accion');
+      switch ($accion){
+        case "agregar":
+
+            break;
+        case "restaurar":
+
+            break;
+        case "configuracion":
+            $this->configurar();
+            break;
+        default:
+            break;
+      }
+
+      $this->backup_comando = $this->backup_setup['backup_comando'];
+
       $this->basepath = dirname(dirname(dirname(__DIR__)));
       $this->path = self::path;
 
@@ -48,6 +79,7 @@ class backup_restore extends fs_controller {
             'user' => FS_DB_USER,
             'pass' => FS_DB_PASS,
             'dbname' => FS_DB_NAME,
+            'command' => $this->backup_comando,
             'root' => '/tmp',
             'backupdir' => $this->basepath.DIRECTORY_SEPARATOR.self::path
         ]);
@@ -57,7 +89,7 @@ class backup_restore extends fs_controller {
             $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
             require_once 'plugins/backup_restore/vendor2/Artesanik/DbProcess/'.$dbInterface.'Process.php';
             $backup = $manager->createBackup('full');
-            $this->new_message('Backup realizado correctamente.');
+            $this->new_message('Backup realizado correctamente: '.$backup);
          } catch (Exception $e){
              $this->new_error_msg('Ocurrio un error interno al intentar crear el backup:');
              $this->new_error_msg($e->getMessage());
@@ -70,6 +102,57 @@ class backup_restore extends fs_controller {
        //$manager->makeRestore()->run('local', 'tmp/sql_backups/backup_'.date('d-m-Y_H:i:s').'.sql.gz', 'production', 'gzip');
 
       $this->files = $this->getFiles(self::path);
+   }
+
+   private function configurar(){
+        $nombre = filter_input(INPUT_POST, 'backup_comando');
+        $cmd = $this->buscarCmd($nombre);
+        $comando = ($cmd)?trim($cmd):$this->backup_setup['backup_comando'];
+        $backup_config = array(
+            'backup_comando' => $comando
+        );
+        $this->fsvar->array_save($backup_config);
+   }
+
+   private function buscarCmd($comando){
+      if(isset($comando)){
+          $resultado = array();
+          exec("$comando --version", $resultado);
+          if(!empty($resultado[0])){
+             return $comando;
+          }else{
+             return false;
+          }
+      }else{
+          $paths = $this->osPath();
+
+          foreach($paths as $cmd){
+              exec("$cmd --version",$resultado);
+              if(!empty($resultado[0])){
+                  return $cmd;
+              }
+          }
+      }
+   }
+
+   private function osPath(){
+       $paths = array();
+       $db_version = explode(" ",$this->db->version());
+       $version = explode(".",$db_version[1]);
+       if(PHP_OS == "WINNT"){
+           $comando = (FS_DB_TYPE=='POSTGRESQL')?'pg_dump.exe':'mysqldump.exe';
+           $paths[] = "c:\\Program Files\\". ucfirst(strtolower($db_version[0]))."\\".$db_version[1]."\\bin\\".$comando;
+           $paths[] = "c:\\Program Files\\". ucfirst(strtolower($db_version[0]))."\\".ucfirst(strtolower($db_version[0]))." ".$db_version[1]."\\bin\\".$comando;
+           $paths[] = "c:\\Program Files\\". ucfirst(strtolower($db_version[0]))."\\".ucfirst(strtolower($db_version[0]))." Server ".$db_version[1]."\\bin\\".$comando;
+           $paths[] = "c:\\Program Files\\". ucfirst(strtolower($db_version[0]))."\\".$version[0].".".$version[1]."\\bin\\".$comando;
+           $paths[] = "c:\\Program Files\\". ucfirst(strtolower($db_version[0]))."\\".$version[0].".".$version[1]."\\exe\\".$comando;
+           $paths[] = "c:\\Program Files\(x86\)\\". ucfirst(strtolower($db_version[0]))."\\".$version[0].".".$version[1]."\\exe\\".$comando;
+       }else{
+           $comando = (FS_DB_TYPE=='POSTGRESQL')?'pg_dump':'mysqldump';
+           $paths[] = "/usr/bin/".$comando;
+           //$paths[] = "/usr/local/bin/".$comando;
+       }
+       return $paths;
    }
 
    private function getFiles($dir) {

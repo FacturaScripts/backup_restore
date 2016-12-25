@@ -35,6 +35,7 @@ class DatabaseManager {
     public $dbname;
     public $root;
     public $backupdir;
+    public $command;
     public $year;
     public $month;
     public $day;
@@ -47,6 +48,7 @@ class DatabaseManager {
         $this->host = $info['host'];
         $this->port = $info['port'];
         $this->dbname = $info['dbname'];
+        $this->command = $info['command'];
         $this->root = $info['root'];
         $this->backupdir = $info['backupdir'];
         $today = getdate();
@@ -76,7 +78,8 @@ class DatabaseManager {
             default:
                 break;
         }
-        $resultado = $dbHandler->createBackup($this,$tipo);
+        //$resultado = $dbHandler->createBackup($this,$tipo);
+        $resultado = $dbHandler->createSystemBackup($this);
         return $resultado;
     }
 
