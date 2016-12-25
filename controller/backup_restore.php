@@ -46,11 +46,14 @@ class backup_restore extends fs_controller {
              'backup_comando' => '',
           ), TRUE
       );
+      //Si no existe el path lo creamos
       if (!file_exists(self::path)) {
          mkdir(self::path);
       }
       //Buscamos el comando de backup en las rutas normales
       $this->configurar();
+
+
       $accion = filter_input(INPUT_POST, 'accion');
       switch ($accion){
         case "agregar":
