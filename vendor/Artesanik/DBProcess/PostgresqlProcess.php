@@ -48,7 +48,7 @@ class PostgresqlProcess {
     }
 
     /**
-     * Conectamos utilizando PDO para obtener las carácteristicas de
+     * Conectamos utilizando PDO para obtener las características de
      * mover información a archivos
      * @param type $db
      * @return \Artesanik\DBProcess\PDO
@@ -68,7 +68,9 @@ class PostgresqlProcess {
             $zip->open($this->destino, \ZipArchive::CREATE);
             $zip->addFile($this->filename);
             $zip->close();
-            unlink($this->filename);
+            if(file_exists($this->filename)) {
+               unlink($this->filename);
+            }
             return $this->destino;
         }
     }
