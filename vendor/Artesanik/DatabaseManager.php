@@ -67,7 +67,7 @@ class DatabaseManager {
         $this->sec = "00";
     }
 
-    public function createBackup($tipo){
+    public function createBackup($tipo=false){
         switch($this->dbms){
             case "MYSQL":
                 $dbHandler = new MysqlProcess;
@@ -78,13 +78,23 @@ class DatabaseManager {
             default:
                 break;
         }
-        //$resultado = $dbHandler->createBackup($this,$tipo);
         $resultado = $dbHandler->createSystemBackup($this);
         return $resultado;
     }
 
-    public function restoreBackup(){
-
+    public function restoreBackup($fileBackup){
+        switch($this->dbms){
+            case "MYSQL":
+                $dbHandler = new MysqlProcess;
+                break;
+            case "POSTGRESQL":
+                $dbHandler = new PostgresqlProcess;
+                break;
+            default:
+                break;
+        }
+        $resultado = $dbHandler->restoreSystemBackup($this,$fileBackup);
+        return $resultado;
     }
 
     public function removeFileBackup(){

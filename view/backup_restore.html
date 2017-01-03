@@ -1,10 +1,40 @@
 {include="header"}
 <script>
+    var backup_cmd = '{$fsc->backup_comando}';
+    var backup_file_now = '{$fsc->backup_file_now}';
+    function crear_backup(){
+        $.ajax({
+            type: 'POST',
+            url: '{$fsc->url()}',
+            async: false,
+            data: 'accion=agregar',
+            success : function(datos) {
+                alert(datos.mensaje);
+                window.location.assign("{$fsc->url()}");
+            },
+            error: function() {
+                alert("Ocurrio un error no contemplado en el plugin, por favor envie un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+            }
+        });
+    }
     $(document).ready(function () {
         $("#b_configuracion").click(function (event) {
             event.preventDefault();
             $("#modal_configuracion").modal('show');
             document.f_configuracion.comando.focus();
+        });
+        
+        $("#b_nuevo_backup").click(function (event) {
+            if(backup_cmd!=='' && backup_file_now===''){
+                crear_backup();
+            }else if(backup_cmd!=='' && backup_file_now!==''){
+                confirmacion = confirm('¿Ya hay un backup con la fecha actual, está seguro que quiere generarlo nuevamente?');
+                if(confirmacion){
+                    crear_backup();
+                }
+            }else{
+                alert('¡Primero debe configurar el comando para realizar el backup!');
+            }
         });
     });
 </script>
@@ -26,7 +56,7 @@
                 {/loop}
             </span>
         </div>
-        <a class="btn btn-sm btn-success" aria-label="Nueva copia" {if="$fsc->backup_comando"}href="{$fsc->url()}&nueva=true"{else}href="#"{/if}>
+        <a class="btn btn-sm btn-success" aria-label="Nueva copia" id="b_nuevo_backup">
             <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
             <span class="hidden-xs">&nbsp; Nueva copia</span>
         </a>
@@ -44,6 +74,7 @@
             <thead>
                 <tr>
                     <th>Nombre</th>
+                    <th>Ubicación</th>
                     <th>Tamaño</th>
                     <th>Fecha</th>
                     <th>Restaurar</th>
@@ -52,29 +83,32 @@
                 </tr>
             </thead>
             {loop="$fsc->files"}
-            <tr>
-                <td class="text-left">{$value->filename}</td>
-                <td class="text-left">{$value->size}</td>
-                <td class="text-left">{$value->date}</td>
-                <td class="text-left">
-                    <button type="button" class="btn  btn-success btn-sm">
-                        <span class="fa fa-undo"></span>  Restaurar
-                    </button>
-                </td>
-                <td class="text-left">
-                    <a href="{#FS_PATH#}{$fsc->path}/{$value->filename}" class="btn btn-primary" aria-label="Descargar">
-                        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                    </a>
-                </td>
-                <td class="text-left">
-                    <button type="button" class="btn btn-danger" aria-label="Eliminar">
-                        <span class="fa fa-trash" aria-hidden="true"></span>
-                    </button>
-                </td>
-            </tr>
+            <form name="f_lista_backups" method="POST" action="{$fsc->url()}" class="form" role="form">
+                <tr>
+                    <td class="text-left">{$value->filename}</td>
+                    <td class="text-left">{$value->path}</td>
+                    <td class="text-left">{$value->size}</td>
+                    <td class="text-left">{$value->date}</td>
+                    <td class="text-left">
+                        <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup.restore_file.value='{$value->path}'" data-target="#advertenciaRestaurar">
+                            <span class="fa fa-undo"></span>  Restaurar
+                        </button>
+                    </td>
+                    <td class="text-left">
+                        <a href="{#FS_PATH#}{$fsc->path}/{$value->filename}" class="btn btn-primary" aria-label="Descargar">
+                            <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                        </a>
+                    </td>
+                    <td class="text-left">
+                        <button type="button" class="btn btn-danger" aria-label="Eliminar">
+                            <span class="fa fa-trash" aria-hidden="true"></span>
+                        </button>
+                    </td>
+                </tr>
+            </form>
             {else}
             <tr  class="bg-warning">
-                <td colspan="6">
+                <td colspan="7">
                     No se ha encontrado ningún archivo.
                 </td>
             </tr>
@@ -91,11 +125,11 @@
                     <h4 class="modal-title"><span class="fa fa-gears"></span>Configuración</h4>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
+                    <div class="form-group col-sm-12">
                         <label for="backup_comando" class="control-label">Comando para backup:</label>
                         <input class="form-control" type="text" name="backup_comando" id="backup_comando" value="{$fsc->backup_comando}" autocomplete="off"/>
                     </div>
-                    <div class="row">
+                    <div class="col-sm-12">
                         <div class="help-block text-justify">
                             {if="$fsc->backup_comando"}
                             <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->backup_comando}</div>
@@ -111,11 +145,11 @@
                             {/if}
                         </div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group col-sm-12">
                         <label for="restore_comando" class="control-label">Comando para restore:</label>
                         <input class="form-control" type="text" name="restore_comando" id="restore_comando" value="{$fsc->restore_comando}" autocomplete="off"/>
                     </div>
-                    <div class="row">
+                    <div class="col-sm-12">
                         <div class="help-block text-justify">
                             {if="$fsc->restore_comando"}
                             <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->restore_comando}</div>
@@ -138,6 +172,28 @@
                         <span class="glyphicon glyphicon-floppy-disk"></span> &nbsp; Guardar
                     </button>
                 </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="advertenciaRestaurar" tabindex="-1" role="dialog" aria-labelledby="advertenciaRestaurar">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form name="f_restaurar_backup" method="POST" action="{$fsc->url()}" class="form" role="form">
+            <div class="modal-header">
+                <button type="button" class="close" onclick="document.f_restaurar_backup.restore_file.value=''" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title text-danger" id="advertenciaRestaurar"><span class="fa fa-warning"></span>&nbsp;Advertencia</h4>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" name="restore_file" value="">
+              Esta seguro que quiere utilizar este backup para restaurar.<br />
+              Haciendo esto se eliminará cualquier información que se haya generado despues de que se creó este backup.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal" onclick="document.f_restaurar_backup.restore_file.value=''">Cerrar</button>
+                <button type="submit" name="accion" value="restaurar" class="btn btn-danger">Restaurar</button>
+            </div>
             </form>
         </div>
     </div>

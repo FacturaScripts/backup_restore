@@ -59,10 +59,11 @@ class PostgresqlProcess {
     }
 
     public function createSystemBackup($db){
+        $cmdout = array();
         if($db->dbname){
             $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
             $this->filename = $this->tempdir.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
-            exec("export PGPASSWORD={$db->pass} | export PGUSER={$db->user} | {$db->command} -h {$db->host} -U {$db->user} {$db->dbname} -b > {$this->filename} 2>&1 | unset PGPASSWORD | unset PGUSER",$cmdout);
+            exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --format=c -b -c -C --disable-triggers --if-exists > {$this->filename} 2>&1 | unset PGPASSWORD | unset PGUSER",$cmdout);
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
             $zip->open($this->destino, \ZipArchive::CREATE);
@@ -161,5 +162,47 @@ class PostgresqlProcess {
                 break;
         }
         return $string;
+    }
+    
+    public function restoreSystemBackup($db,$fileBackup){
+        $file_info = $this->fileInfo($fileBackup);
+        $tmp_file = '';
+        $cmdout = null;
+        if($file_info=='sql'){
+            $tmp_file = $this->tempdir.$fileBackup;
+            copy($fileBackup, $tmp_file);
+        }elseif($file_info=='zip'){
+            $zip = new \ZipArchive();
+            if ($zip->open($fileBackup) === TRUE) {
+                $backup = $zip->getNameIndex(0);
+                $fileinfo = pathinfo($backup);
+                $tmp_file = $this->tempdir.$fileinfo['basename'];
+                copy("zip://".$fileBackup."#".$backup, $tmp_file);
+                $zip->close();
+            }
+        }
+        if(!empty($tmp_file)){
+            exec("PGPASSWORD={$db->pass} {$db->command} -U {$db->user} -h {$db->host} -p {$db->port} -d {$db->dbname} --disable-triggers --if-exists -c -Fc {$tmp_file} 2>&1",$cmdout);
+            if(file_exists($tmp_file)) {
+               unlink($tmp_file);
+            }
+            return (!empty($cmdout))?$cmdout[0]:$cmdout;
+        }else{
+            return 'No se encuentra la ruta del archivo';
+        }
+        
+    }
+    
+    private function fileInfo($file){
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $information = finfo_file($finfo, $file);
+        finfo_close($finfo);
+        if($information == 'text/plain'){
+            return 'sql';
+        }elseif($information == 'application/zip'){
+            return 'zip';
+        }else{
+            return false;
+        }
     }
 }

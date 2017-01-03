@@ -30,11 +30,12 @@ class backup_restore extends fs_controller {
    public $fsvar;
    public $basepath;
    public $path;
+   public $backup_file_now;
    public $backup_comando;
    public $restore_comando;
    public $backup_setup;
    public $db_version;
-
+   public $results;
    public function __construct() {
       parent::__construct(__CLASS__, 'Copias de seguridad', 'admin', FALSE, TRUE);
    }
@@ -49,27 +50,70 @@ class backup_restore extends fs_controller {
       //Buscamos los binarios necesarios en las rutas normales
       $this->configurar();
 
-
-      $accion = filter_input(INPUT_POST, 'accion');
-      switch ($accion) {
-         case "agregar":
-
-            break;
-         case "restaurar":
-
-            break;
-         case "configuracion":
-            $this->configurar();
-            break;
-         default:
-            break;
-      }
-
       $this->backup_comando = $this->backup_setup['backup_comando'];
       $this->restore_comando = $this->backup_setup['restore_comando'];
 
       $this->basepath = dirname(dirname(dirname(__DIR__)));
       $this->path = self::path;
+
+      // Interfaz para cargar 
+      $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
+      require_once 'plugins/backup_restore/vendor/Artesanik/DBProcess/' . $dbInterface . 'Process.php';
+
+      //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
+      $this->backup_file_now = file_exists(self::path.DIRECTORY_SEPARATOR.FS_DB_NAME."_".\date("Ymd").".zip");
+      
+      $accion = filter_input(INPUT_POST, 'accion');
+      if($accion){
+        $manager = new DatabaseManager([
+             'dbms' => FS_DB_TYPE,
+             'host' => FS_DB_HOST,
+             'port' => FS_DB_PORT,
+             'user' => FS_DB_USER,
+             'pass' => FS_DB_PASS,
+             'dbname' => FS_DB_NAME,
+             'command' => ($accion=='agregar')?$this->backup_comando:$this->restore_comando,
+             'root' => '/tmp',
+             'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::path
+        ]);
+        switch ($accion) {
+           case "agregar":
+               $this->template = false;
+              try {
+                 $backup = $manager->createBackup('full');
+                 if (file_exists($backup)) {
+                    header('Content-Type: application/json');
+                    echo json_encode( array('success' => true, 'mensaje' => 'Backup realizado correctamente: ' . $backup) );
+                 } else {
+                    header('Content-Type: application/json');
+                    echo json_encode( array('success' => false, 'mensaje' => 'Algo salió mal realizando el backup: ' . $backup) );
+                 }
+              } catch (Exception $e) {
+                 header('Content-Type: application/json');
+                echo json_encode( array('success' => false, 'mensaje' => 'Ocurrio un error interno al intentar crear el backup:' . $e->getMessage()) );
+              }
+              break;
+           case "restaurar":
+              $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
+              if(file_exists($archivo)){
+                  $backup = $manager->restoreBackup($archivo);
+                  if($backup){
+                      $this->new_error_message('Ocurrió un error al querer restaurar el backup'.$backup);
+                  }else{
+                      $this->new_message('¡Backup restaurado con exito!');
+                  }
+              }else{
+                  $this->new_error_msg('¡No se indicó un backup para realizar la restauración!');
+              }
+           case "configuracion":
+              $this->configurar();
+              break;
+           default:
+              break;
+        }
+      }
+
+
 
       if (isset($_GET['nueva'])) {
          $manager = new DatabaseManager([
@@ -84,26 +128,12 @@ class backup_restore extends fs_controller {
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::path
          ]);
 
-         try {
-            // backup
-            $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
-            require_once 'plugins/backup_restore/vendor/Artesanik/DBProcess/' . $dbInterface . 'Process.php';
-            $backup = $manager->createBackup('full');
-            if (file_exists($backup)) {
-               $this->new_message('Backup realizado correctamente: ' . $backup);
-            } else {
-               $this->new_error_msg('Algo salió mal realizando el backup: ' . $backup);
-            }
-         } catch (Exception $e) {
-            $this->new_error_msg('Ocurrio un error interno al intentar crear el backup:');
-            $this->new_error_msg($e->getMessage());
-            $this->new_error_msg($e->getTraceAsString());
-         }
+         
       } else if (isset($_GET['nueva'])) {
          //restore
          //$manager->makeRestore()->run('local', 'tmp/sql_backups/backup_'.date('d-m-Y_H:i:s').'.sql.gz', 'production', 'gzip');
       }
-
+      $this->results = array();
       $this->files = $this->getFiles(self::path);
    }
 
@@ -183,22 +213,23 @@ class backup_restore extends fs_controller {
    }
 
    private function getFiles($dir) {
-      $result = array();
       foreach (new DirectoryIterator($dir) as $file) {
          if ($file->isDot()) {
             continue;
          } elseif ($file->isFile()) {
             $archivo = new stdClass();
             $archivo->filename = $file->getFilename();
+            $archivo->path = $file->getPathName();
             $archivo->size = filesize($file->getPathName());
             $archivo->date = date('Y-m-d', filemtime($file->getPathName()));
             $archivo->type = $file->getExtension();
-            $result[] = $archivo;
-         } else {
-            $result[$file] = $this->getFiles($dir . DIRECTORY_SEPARATOR . $file);
+            $archivo->file = TRUE;
+            $this->results[] = $archivo;
+         } elseif($file->isDir()) {
+            $this->getFiles($dir.DIRECTORY_SEPARATOR.$file);
          }
       }
-      return $result;
+      return $this->results;
    }
 
    public function url() {
