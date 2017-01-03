@@ -98,7 +98,7 @@ class backup_restore extends fs_controller {
               if(file_exists($archivo)){
                   $backup = $manager->restoreBackup($archivo);
                   if($backup){
-                      $this->new_error_message('Ocurrió un error al querer restaurar el backup'.$backup);
+                      $this->new_error_msg('Ocurrió un error al querer restaurar el backup: '.$backup);
                   }else{
                       $this->new_message('¡Backup restaurado con exito!');
                   }

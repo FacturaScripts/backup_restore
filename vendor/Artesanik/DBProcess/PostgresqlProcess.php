@@ -61,8 +61,8 @@ class PostgresqlProcess {
     public function createSystemBackup($db){
         $cmdout = array();
         if($db->dbname){
-            $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
-            $this->filename = $this->tempdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
+            $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbms.'_'.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
+            $this->filename = $this->tempdir.DIRECTORY_SEPARATOR.$db->dbms.'_'.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
             exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --format=c -b -c -C --disable-triggers --if-exists > {$this->filename} 2>&1",$cmdout);
             if(empty($cmdout)){
                 //Comprimimos el Backup y lo mandamos a su detino

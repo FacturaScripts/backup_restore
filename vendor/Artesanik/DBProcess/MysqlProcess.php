@@ -57,10 +57,19 @@ class MysqlProcess {
     
     public function createSystemBackup($db){
         if($db->dbname){
-            $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
-            $this->filename = $this->tempdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
-            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} {$db->dbname} > {$this->filename} 2>&1",$cmdout);
-            if(empty($cmdout)){            
+            $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbms.'_'.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
+            $this->filename = $this->tempdir.DIRECTORY_SEPARATOR.$db->dbms.'_'.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
+            $fp = fopen($this->filename,"w");
+            fputs($fp,sprintf("%s\n\r","SET AUTOCOMMIT=0;"));
+            fputs($fp,sprintf("%s\n\r","SET FOREIGN_KEY_CHECKS=0;"));
+            fclose($fp);
+            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} --databases {$db->dbname} --add-drop-database --add-drop-table --add-drop-trigger >> {$this->filename} 2>&1",$cmdout);
+            if(empty($cmdout)){
+                $fp = fopen($this->filename,"a");
+                fputs($fp,sprintf("%s\n\r","SET FOREIGN_KEY_CHECKS=1;"));
+                fputs($fp,sprintf("%s\n\r","COMMIT;"));
+                fputs($fp,sprintf("%s\n\r","SET AUTOCOMMIT=1;"));
+                fclose($fp);
                 //Comprimimos el Backup y lo mandamos a su detino
                 $zip = new \ZipArchive();
                 $zip->open($this->destino, \ZipArchive::CREATE);
@@ -152,5 +161,47 @@ class MysqlProcess {
         $string = sprintf("\t%s\t%s %s %s,\n\r",
                 $c['Field'],$c['Type'],($c['Null']=='YES')?"NULL":"NOT NULL",($c['Default']=='NULL')?'':"DEFAULT ".$c['Default']);
         return $string;
+    }
+    
+    public function restoreSystemBackup($db,$fileBackup){
+        $file_info = $this->fileInfo($fileBackup);
+        $tmp_file = '';
+        $cmdout = null;
+        if($file_info=='sql'){
+            $tmp_file = $this->tempdir.$fileBackup;
+            copy($fileBackup, $tmp_file);
+        }elseif($file_info=='zip'){
+            $zip = new \ZipArchive();
+            if ($zip->open($fileBackup) === TRUE) {
+                $backup = $zip->getNameIndex(0);
+                $fileinfo = pathinfo($backup);
+                $tmp_file = $this->tempdir.$fileinfo['basename'];
+                copy("zip://".$fileBackup."#".$backup, $tmp_file);
+                $zip->close();
+            }
+        }
+        if(!empty($tmp_file)){
+            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} -d {$db->dbname} < {$tmp_file} 2>&1",$cmdout);
+            if(file_exists($tmp_file)) {
+               unlink($tmp_file);
+            }
+            return (!empty($cmdout))?$cmdout[0]:$cmdout;
+        }else{
+            return 'No se encuentra la ruta del archivo';
+        }
+        
+    }
+    
+    private function fileInfo($file){
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $information = finfo_file($finfo, $file);
+        finfo_close($finfo);
+        if($information == 'text/plain'){
+            return 'sql';
+        }elseif($information == 'application/zip'){
+            return 'zip';
+        }else{
+            return false;
+        }
     }
 }
