@@ -62,17 +62,19 @@ class PostgresqlProcess {
         $cmdout = array();
         if($db->dbname){
             $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
-            $this->filename = $this->tempdir.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
-            exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --format=c -b -c -C --disable-triggers --if-exists > {$this->filename} 2>&1 | unset PGPASSWORD | unset PGUSER",$cmdout);
-            //Comprimimos el Backup y lo mandamos a su detino
-            $zip = new \ZipArchive();
-            $zip->open($this->destino, \ZipArchive::CREATE);
-            $zip->addFile($this->filename);
-            $zip->close();
-            if(file_exists($this->filename)) {
-               unlink($this->filename);
+            $this->filename = $this->tempdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
+            exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --format=c -b -c -C --disable-triggers --if-exists > {$this->filename} 2>&1",$cmdout);
+            if(empty($cmdout)){
+                //Comprimimos el Backup y lo mandamos a su detino
+                $zip = new \ZipArchive();
+                $zip->open($this->destino, \ZipArchive::CREATE);
+                $zip->addFile($this->filename);
+                $zip->close();
+                if(file_exists($this->filename)) {
+                   unlink($this->filename);
+                }
             }
-            return $this->destino;
+            return (!empty($cmdout))?$cmdout[0]:$this->destino;
         }
     }
 
