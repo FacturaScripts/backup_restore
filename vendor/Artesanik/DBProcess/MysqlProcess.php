@@ -58,15 +58,17 @@ class MysqlProcess {
     public function createSystemBackup($db){
         if($db->dbname){
             $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
-            $this->filename = $this->tempdir.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
+            $this->filename = $this->tempdir.DIRECTORY_SEPARATOR.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
             exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} {$db->dbname} > {$this->filename} 2>&1",$cmdout);
-            //Comprimimos el Backup y lo mandamos a su detino
-            $zip = new \ZipArchive();
-            $zip->open($this->destino, \ZipArchive::CREATE);
-            $zip->addFile($this->filename);
-            $zip->close();
-            unlink($this->filename);
-            return $this->destino;
+            if(empty($cmdout)){            
+                //Comprimimos el Backup y lo mandamos a su detino
+                $zip = new \ZipArchive();
+                $zip->open($this->destino, \ZipArchive::CREATE);
+                $zip->addFile($this->filename);
+                $zip->close();
+                unlink($this->filename);
+            }
+            return (!empty($cmdout))?$cmdout[0]:$this->destino;
         }
     }
     
