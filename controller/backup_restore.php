@@ -56,13 +56,13 @@ class backup_restore extends fs_controller {
       $this->basepath = dirname(dirname(dirname(__DIR__)));
       $this->path = self::path;
 
-      // Interfaz para cargar 
+      // Interfaz para cargar
       $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
       require_once 'plugins/backup_restore/vendor/Artesanik/DBProcess/' . $dbInterface . 'Process.php';
 
       //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
       $this->backup_file_now = file_exists(self::path.DIRECTORY_SEPARATOR.FS_DB_NAME."_".\date("Ymd").".zip");
-      
+
       $accion = filter_input(INPUT_POST, 'accion');
       if($accion){
         $manager = new DatabaseManager([
@@ -73,7 +73,6 @@ class backup_restore extends fs_controller {
              'pass' => FS_DB_PASS,
              'dbname' => FS_DB_NAME,
              'command' => ($accion=='agregar')?$this->backup_comando:$this->restore_comando,
-             'root' => '/tmp',
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::path
         ]);
         switch ($accion) {
@@ -113,26 +112,6 @@ class backup_restore extends fs_controller {
         }
       }
 
-
-
-      if (isset($_GET['nueva'])) {
-         $manager = new DatabaseManager([
-             'dbms' => FS_DB_TYPE,
-             'host' => FS_DB_HOST,
-             'port' => FS_DB_PORT,
-             'user' => FS_DB_USER,
-             'pass' => FS_DB_PASS,
-             'dbname' => FS_DB_NAME,
-             'command' => $this->backup_comando,
-             'root' => '/tmp',
-             'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::path
-         ]);
-
-         
-      } else if (isset($_GET['nueva'])) {
-         //restore
-         //$manager->makeRestore()->run('local', 'tmp/sql_backups/backup_'.date('d-m-Y_H:i:s').'.sql.gz', 'production', 'gzip');
-      }
       $this->results = array();
       $this->files = $this->getFiles(self::path);
    }
@@ -145,15 +124,15 @@ class backup_restore extends fs_controller {
           'restore_comando' => '',
               ), TRUE
       );
-      
+
       $nombre = filter_input(INPUT_POST, 'backup_comando');
       $cmd = $this->buscarCmd($nombre, true);
       $comando_backup = ($cmd) ? trim($cmd) : $this->backup_setup['backup_comando'];
-      
+
       $nombre = filter_input(INPUT_POST, 'restore_comando');
       $cmd = $this->buscarCmd($nombre, false);
       $comando_restore = ($cmd) ? trim($cmd) : $this->backup_setup['restore_comando'];
-      
+
       $backup_config = array(
           'backup_comando' => $comando_backup ,
           'restore_comando' => $comando_restore
@@ -209,7 +188,6 @@ class backup_restore extends fs_controller {
             $comando = $comando[1];
          }
          $paths[] = "/usr/bin/" . $comando;
-         //$paths[] = "/usr/local/bin/".$comando;
       }
       return $paths;
    }

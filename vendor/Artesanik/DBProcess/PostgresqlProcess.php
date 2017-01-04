@@ -165,20 +165,20 @@ class PostgresqlProcess {
         }
         return $string;
     }
-    
+
     public function restoreSystemBackup($db,$fileBackup){
         $file_info = $this->fileInfo($fileBackup);
         $tmp_file = '';
         $cmdout = null;
         if($file_info=='sql'){
-            $tmp_file = $this->tempdir.$fileBackup;
+            $tmp_file = $this->tempdir.DIRECTORY_SEPARATOR.$fileBackup;
             copy($fileBackup, $tmp_file);
         }elseif($file_info=='zip'){
             $zip = new \ZipArchive();
             if ($zip->open($fileBackup) === TRUE) {
                 $backup = $zip->getNameIndex(0);
                 $fileinfo = pathinfo($backup);
-                $tmp_file = $this->tempdir.$fileinfo['basename'];
+                $tmp_file = $this->tempdir.DIRECTORY_SEPARATOR.$fileinfo['basename'];
                 copy("zip://".$fileBackup."#".$backup, $tmp_file);
                 $zip->close();
             }
@@ -192,9 +192,9 @@ class PostgresqlProcess {
         }else{
             return 'No se encuentra la ruta del archivo';
         }
-        
+
     }
-    
+
     private function fileInfo($file){
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $information = finfo_file($finfo, $file);

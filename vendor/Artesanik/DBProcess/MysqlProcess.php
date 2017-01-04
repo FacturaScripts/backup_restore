@@ -63,7 +63,7 @@ class MysqlProcess {
             fputs($fp,sprintf("%s\n\r","SET AUTOCOMMIT=0;"));
             fputs($fp,sprintf("%s\n\r","SET FOREIGN_KEY_CHECKS=0;"));
             fclose($fp);
-            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} --databases {$db->dbname} --add-drop-database --add-drop-table  >> {$this->filename} 2>&1",$cmdout);
+            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1",$cmdout);
             if(empty($cmdout)){
                 $fp = fopen($this->filename,"a");
                 fputs($fp,sprintf("%s\n\r","SET FOREIGN_KEY_CHECKS=1;"));
@@ -181,9 +181,17 @@ class MysqlProcess {
             }
         }
         if(!empty($tmp_file)){
-            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} -D {$db->dbname} < {$tmp_file} 2>&1",$cmdout);
+            //Creamos el archivo con el usuario y la clave temporalmente
+            $access_file=$this->tempdir.DIRECTORY_SEPARATOR.'dbaccess.cnf';
+            $fp = fopen($access_file);
+            fputs($fp, sprintf("%s","[mysql]\n"));
+            fputs($fp, sprintf("%s",$this->user."\n"));
+            fputs($fp, sprintf("%s",$this->pass."\n"));
+            fclose($fp);
+            exec("{$db->command} -h {$db->host} --defaults-extra-file={$access_file} -D {$db->dbname} < {$tmp_file} 2>&1",$cmdout);
             if(file_exists($tmp_file)) {
                unlink($tmp_file);
+               unlink($access_file);
             }
             return (!empty($cmdout))?$cmdout[0]:$cmdout;
         }else{
