@@ -63,7 +63,7 @@ class MysqlProcess {
             fputs($fp,sprintf("%s\n\r","SET AUTOCOMMIT=0;"));
             fputs($fp,sprintf("%s\n\r","SET FOREIGN_KEY_CHECKS=0;"));
             fclose($fp);
-            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} --databases {$db->dbname} --add-drop-database --add-drop-table --add-drop-trigger >> {$this->filename} 2>&1",$cmdout);
+            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} --databases {$db->dbname} --add-drop-database --add-drop-table  >> {$this->filename} 2>&1",$cmdout);
             if(empty($cmdout)){
                 $fp = fopen($this->filename,"a");
                 fputs($fp,sprintf("%s\n\r","SET FOREIGN_KEY_CHECKS=1;"));
@@ -175,13 +175,13 @@ class MysqlProcess {
             if ($zip->open($fileBackup) === TRUE) {
                 $backup = $zip->getNameIndex(0);
                 $fileinfo = pathinfo($backup);
-                $tmp_file = $this->tempdir.$fileinfo['basename'];
+                $tmp_file = $this->tempdir."/".$fileinfo['basename'];
                 copy("zip://".$fileBackup."#".$backup, $tmp_file);
                 $zip->close();
             }
         }
         if(!empty($tmp_file)){
-            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} -d {$db->dbname} < {$tmp_file} 2>&1",$cmdout);
+            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} -D {$db->dbname} < {$tmp_file} 2>&1",$cmdout);
             if(file_exists($tmp_file)) {
                unlink($tmp_file);
             }
