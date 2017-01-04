@@ -174,7 +174,8 @@ class backup_restore extends fs_controller {
          $paths = $this->osPath($backup);
 
          foreach ($paths as $cmd) {
-            exec("$cmd --version", $resultado);
+            $lanza_comando = '"'."$cmd". '"' . " --version";
+            exec($lanza_comando, $resultado);
             if (!empty($resultado[0])) {
                return $cmd;
             }
@@ -188,7 +189,7 @@ class backup_restore extends fs_controller {
       $version[0] = substr($db_version[1],0,1);
       $version[1] = intval(substr($db_version[1],1,2));
       if (PHP_OS == "WINNT") {
-         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump.exe', 'pg_restore') : array('mysqldump.exe','mysql');
+         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump.exe', 'pg_restore') : array('mysqldump.exe','mysql.exe');
          if ($backup == TRUE) {
             $comando = $comando[0];
          } else {
