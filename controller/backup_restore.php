@@ -177,7 +177,7 @@ class backup_restore extends fs_controller {
             $lanza_comando = '"'."$cmd". '"' . " --version";
             exec($lanza_comando, $resultado);
             if (!empty($resultado[0])) {
-               return $cmd;
+               return $lanza_comando;
             }
          }
       }
