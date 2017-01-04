@@ -174,9 +174,10 @@ class backup_restore extends fs_controller {
          $paths = $this->osPath($backup);
 
          foreach ($paths as $cmd) {
-            exec("$cmd --version", $resultado);
+            $lanza_comando = '"'."$cmd". '"' . " --version";
+            exec($lanza_comando, $resultado);
             if (!empty($resultado[0])) {
-               return $cmd;
+               return '"'."$cmd". '"';
             }
          }
       }
@@ -185,20 +186,21 @@ class backup_restore extends fs_controller {
    private function osPath($backup = TRUE) {
       $paths = array();
       $db_version = explode(" ", $this->db->version());
-      $version = explode(".", $db_version[1]);
+      $version[0] = substr($db_version[1],0,1);
+      $version[1] = intval(substr($db_version[1],1,2));
       if (PHP_OS == "WINNT") {
-         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump.exe', 'pg_restore') : array('mysqldump.exe','mysql');
+         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump.exe', 'pg_restore') : array('mysqldump.exe','mysql.exe');
          if ($backup == TRUE) {
             $comando = $comando[0];
          } else {
             $comando = $comando[1];
          }
-         $paths[] = "C:\\Program Files\\" . ucfirst(strtolower($db_version[0])) . "\\" . $db_version[1] . "\\bin\\" . $comando;
-         $paths[] = "C:\\Program Files\\" . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])) . " " . $db_version[1] . "\\bin\\" . $comando;
-         $paths[] = "C:\\Program Files\\" . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])) . " Server " . $db_version[1] . "\\bin\\" . $comando;
-         $paths[] = "C:\\Program Files\\" . ucfirst(strtolower($db_version[0])) . "\\" . $version[0] . "." . $version[1] . "\\bin\\" . $comando;
-         $paths[] = "C:\\Program Files\\" . ucfirst(strtolower($db_version[0])) . "\\" . $version[0] . "." . $version[1] . "\\exe\\" . $comando;
-         $paths[] = "C:\\Program Files\(x86\)\\" . ucfirst(strtolower($db_version[0])) . "\\" . $version[0] . "." . $version[1] . "\\exe\\" . $comando;
+         $base_dir = str_replace(" (x86)","",getenv("PROGRAMFILES")) . "\\";
+         $base_dirx86 = getenv("PROGRAMFILES") . "\\";
+         $paths[] = $base_dir . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])). " Server " . $version[0] . "." . $version[1] . "\\bin\\" . $comando;
+         $paths[] = $base_dirx86 . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])). " Server " . $version[0] . "." . $version[1] . "\\bin\\" . $comando;
+         $paths[] = $base_dir . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])). " Server " . $version[0] . "." . $version[1] . "\\exe\\" . $comando;
+         $paths[] = $base_dirx86 . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])). " Server " . $version[0] . "." . $version[1] . "\\exe\\" . $comando;
       } else {
          $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump', 'pg_restore') : array('mysqldump', 'mysql');
          if ($backup == TRUE) {
