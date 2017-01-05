@@ -183,12 +183,13 @@ class MysqlProcess {
         if(!empty($tmp_file)){
             //Creamos el archivo con el usuario y la clave temporalmente
             $access_file=$this->tempdir.DIRECTORY_SEPARATOR.'dbaccess.cnf';
-            $fp = fopen($access_file);
-            fputs($fp, sprintf("%s","[mysql]\n"));
-            fputs($fp, sprintf("%s",$this->user."\n"));
-            fputs($fp, sprintf("%s",$this->pass."\n"));
+            $fp = fopen($access_file,"w+");
+            fputs($fp, sprintf("%s","[client]\n"));
+            fputs($fp, sprintf("user=%s",$db->user."\n"));
+            fputs($fp, sprintf("password=%s",$db->pass."\n"));
             fclose($fp);
-            exec("{$db->command} -h {$db->host} --defaults-extra-file={$access_file} -D {$db->dbname} < {$tmp_file} 2>&1",$cmdout);
+            $launchparam = "{$db->command} --defaults-extra-file={$access_file} -h {$db->host} -D {$db->dbname} < {$tmp_file} 2>&1";
+            exec($launchparam,$cmdout);
             if(file_exists($tmp_file)) {
                unlink($tmp_file);
                unlink($access_file);
