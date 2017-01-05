@@ -89,7 +89,7 @@
                     <td class="text-left">{$value->date}</td>
                     <td class="text-center">
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup.restore_file.value = '{$value->path}'" data-target="#advertenciaRestaurar" title="Restaurar">
+                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup.restore_file.value = '{$value->escaped_path}'" data-target="#advertenciaRestaurar" title="Restaurar">
                                 <span class="fa fa-undo"></span>
                                 <span class="hidden-xs hidden-sm">&nbsp; Restaurar</span>
                             </button>
