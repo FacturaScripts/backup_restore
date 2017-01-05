@@ -200,6 +200,7 @@ class backup_restore extends fs_controller {
             $archivo = new stdClass();
             $archivo->filename = $file->getFilename();
             $archivo->path = $file->getPathName();
+            // FIXME Revisar para no tener que pasar el valor por duplicado
             $archivo->escaped_path = addslashes($file->getPathName());
             $archivo->size = filesize($file->getPathName());
             $archivo->date = date('Y-m-d', filemtime($file->getPathName()));
