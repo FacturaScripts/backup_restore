@@ -59,11 +59,17 @@ class MysqlProcess {
         if($db->dbname){
             $this->destino = $db->backupdir.DIRECTORY_SEPARATOR.$db->dbms.'_'.$db->dbname.'_'.$db->year.$db->month.$db->day.'.zip';
             $this->filename = $this->tempdir.DIRECTORY_SEPARATOR.$db->dbms.'_'.$db->dbname.'_'.$db->year.$db->month.$db->day.'.sql';
+            $access_file = $this->tempdir.DIRECTORY_SEPARATOR.'dbaccess.cnf';
             $fp = fopen($this->filename,"w");
             fputs($fp,sprintf("%s\n\r","SET AUTOCOMMIT=0;"));
             fputs($fp,sprintf("%s\n\r","SET FOREIGN_KEY_CHECKS=0;"));
             fclose($fp);
-            exec("{$db->command} -h {$db->host} -u {$db->user} -p{$db->pass} --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1",$cmdout);
+            $fp = fopen($access_file,"w+");
+            fputs($fp, sprintf("%s","[client]\n"));
+            fputs($fp, sprintf("user=%s",$db->user."\n"));
+            fputs($fp, sprintf("password=%s",$db->pass."\n"));
+            fclose($fp);
+            exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1",$cmdout);
             if(empty($cmdout)){
                 $fp = fopen($this->filename,"a");
                 fputs($fp,sprintf("%s\n\r","SET FOREIGN_KEY_CHECKS=1;"));
@@ -76,6 +82,7 @@ class MysqlProcess {
                 $zip->addFile($this->filename);
                 $zip->close();
                 unlink($this->filename);
+                unlink($access_file);
             }
             return (!empty($cmdout))?$cmdout[0]:$this->destino;
         }
