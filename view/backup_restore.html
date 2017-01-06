@@ -2,12 +2,29 @@
 <script>
     var backup_cmd = '{$fsc->backup_comando}';
     var backup_file_now = '{$fsc->backup_file_now}';
-    function crear_backup() {
+
+    function crear_backup_db() {
         $.ajax({
             type: 'POST',
             url: '{$fsc->url()}',
             async: false,
-            data: 'accion=agregar',
+            data: 'accion=agregardb',
+            success: function (datos) {
+                alert(datos.mensaje);
+                window.location.assign("{$fsc->url()}");
+            },
+            error: function () {
+                alert("Ocurrió un error no contemplado en el plugin, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+            }
+        });
+    }
+
+    function crear_backup_fs() {
+        $.ajax({
+            type: 'POST',
+            url: '{$fsc->url()}',
+            async: false,
+            data: 'accion=agregarfs',
             success: function (datos) {
                 alert(datos.mensaje);
                 window.location.assign("{$fsc->url()}");
@@ -17,6 +34,7 @@
             }
         });
     }
+
     $(document).ready(function () {
         $("#b_configuracion").click(function (event) {
             event.preventDefault();
@@ -24,16 +42,27 @@
             document.f_configuracion.comando.focus();
         });
 
-        $("#b_nuevo_backup").click(function (event) {
+        $("#b_nuevo_backup_db").click(function (event) {
             if (backup_cmd !== '' && backup_file_now === '') {
-                crear_backup();
+                crear_backup_db();
             } else if (backup_cmd !== '' && backup_file_now !== '') {
                 confirmacion = confirm('¿Ya hay un backup con la fecha actual, está seguro que quiere generarlo nuevamente?');
                 if (confirmacion) {
-                    crear_backup();
+                    crear_backup_db();
                 }
             } else {
                 alert('¡Primero debe configurar el comando para realizar el backup!');
+            }
+        });
+
+        $("#b_nuevo_backup_fs").click(function (event) {
+            if (backup_file_now === '') {
+                crear_backup_fs();
+            } else {
+                confirmacion = confirm('¿Ya hay un backup con la fecha actual, está seguro que quiere generarlo nuevamente?');
+                if (confirmacion) {
+                    crear_backup_fs();
+                }
             }
         });
     });
@@ -43,9 +72,10 @@
         <div class="btn-group">
             <a class="btn btn-sm btn-default" href="{$fsc->url()}" title="Recargar la página">
                 <span class="glyphicon glyphicon-refresh"></span>
+                <span class="hidden-xs">&nbsp;</span>
             </a>
             <span class="btn-group">
-                <a id="b_configuracion" class="btn btn-sm btn-default" href="#">
+                <a id="b_configuracion" class="btn btn-sm btn-primary" href="#">
                     <span class="fa fa-gears"></span>
                     <span class="hidden-xs">&nbsp; Configuración</span>
                 </a>
@@ -56,10 +86,16 @@
                 {/loop}
             </span>
         </div>
-        <a class="btn btn-sm btn-success" aria-label="Nueva copia" id="b_nuevo_backup">
-            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-            <span class="hidden-xs">&nbsp; Nueva copia</span>
-        </a>
+        <div class="btn-group">
+            <a class="btn btn-sm btn-success" aria-label="Nueva copia" id="b_nuevo_backup_db">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                <span class="hidden-xs">&nbsp; Copia DB</span>
+            </a>
+            <a class="btn btn-sm btn-success" aria-label="Nueva copia" id="b_nuevo_backup_fs">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                <span class="hidden-xs">&nbsp; Copia FS</span>
+            </a>
+        </div>
     </div>
     <div class="col-sm-5 col-xs-6 text-right">
         <h2 style="margin-top: 0px;">
@@ -74,32 +110,34 @@
             <thead>
                 <tr>
                     <th>Nombre</th>
+                    <th>Tipo</th>
                     <th>Ubicación</th>
                     <th>Tamaño</th>
                     <th>Fecha</th>
-                    <th class="text-center">Acciones</th>
+                    <th class="text-center" style="min-width:125px">Acciones</th>
                 </tr>
             </thead>
-            {loop="$fsc->files"}
-            <form name="f_lista_backups" method="POST" action="{$fsc->url()}" class="form" role="form">
+            {loop="$fsc->sql_backup_files"}
+            <form name="f_lista_backups_sql" method="POST" action="{$fsc->url()}" class="form" role="form">
                 <tr>
                     <td class="text-left">{$value->filename}</td>
+                    <td class="text-left">Base de datos</td>
                     <td class="text-left">{$value->path}</td>
                     <td class="text-left">{$value->size}</td>
                     <td class="text-left">{$value->date}</td>
                     <td class="text-center">
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup.restore_file.value = '{$value->escaped_path}'" data-target="#advertenciaRestaurar" title="Restaurar">
+                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup_sql.restore_file.value = '{$value->escaped_path}'" data-target="#advertenciaRestaurarSQL" title="Restaurar DB">
                                 <span class="fa fa-undo"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Restaurar</span>
+                                <span class="hidden-xs hidden-sm">&nbsp; Restaurar DB</span>
                             </button>
-                            <a href="{#FS_PATH#}{$fsc->path}/{$value->filename}" class="btn btn-primary btn-sm" aria-label="Descargar" title="Descargar">
+                            <a href="{#FS_PATH#}{$fsc->path}/{$value->filename}" class="btn btn-primary btn-sm" aria-label="Descargar DB" title="Descargar DB">
                                 <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Descargar</span>
+                                <span class="hidden-xs hidden-sm">&nbsp; Descargar DB</span>
                             </a>
-                            <button type="button" class="btn btn-danger btn-sm" aria-label="Eliminar" title="Eliminar">
+                            <button type="button" class="btn btn-danger btn-sm" aria-label="Eliminar DB" title="Eliminar DB">
                                 <span class="fa fa-trash" aria-hidden="true"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Eliminar</span>
+                                <span class="hidden-xs hidden-sm">&nbsp; Eliminar DB</span>
                             </button>
                         </div>
                     </td>
@@ -107,8 +145,41 @@
             </form>
             {else}
             <tr  class="bg-warning">
-                <td colspan="5">
-                    No se ha encontrado ningún archivo.
+                <td colspan="6">
+                    No se ha encontrado ningún backup de base de datos de FacturaScripts.
+                </td>
+            </tr>
+            {/loop}
+            {loop="$fsc->fs_backup_files"}
+            <form name="f_lista_backups_fs" method="POST" action="{$fsc->url()}" class="form" role="form">
+                <tr>
+                    <td class="text-left">{$value->filename}</td>
+                    <td class="text-left">Archivos</td>
+                    <td class="text-left">{$value->path}</td>
+                    <td class="text-left">{$value->size}</td>
+                    <td class="text-left">{$value->date}</td>
+                    <td class="text-center">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup_fs.restore_file.value = '{$value->path}'" data-target="#advertenciaRestaurarFS" title="Restaurar FS">
+                                <span class="fa fa-undo"></span>
+                                <span class="hidden-xs hidden-sm">&nbsp; Restaurar FS</span>
+                            </button>
+                            <a href="{#FS_PATH#}{$fsc->path}/{$value->filename}" class="btn btn-primary btn-sm" aria-label="Descargar FS" title="Descargar FS">
+                                <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                                <span class="hidden-xs hidden-sm">&nbsp; Descargar FS</span>
+                            </a>
+                            <button type="button" class="btn btn-danger btn-sm" aria-label="Eliminar FS" title="Eliminar FS">
+                                <span class="fa fa-trash" aria-hidden="true"></span>
+                                <span class="hidden-xs hidden-sm">&nbsp; Eliminar FS</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </form>
+            {else}
+            <tr  class="bg-warning">
+                <td colspan="6">
+                    No se ha encontrado ningún backup de archivos de FacturaScripts.
                 </td>
             </tr>
             {/loop}
@@ -176,22 +247,45 @@
     </div>
 </div>
 <!-- Modal -->
-<div class="modal fade" id="advertenciaRestaurar" tabindex="-1" role="dialog" aria-labelledby="advertenciaRestaurar">
+<div class="modal fade" id="advertenciaRestaurarSQL" tabindex="-1" role="dialog" aria-labelledby="advertenciaRestaurarSQL">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <form name="f_restaurar_backup" method="POST" action="{$fsc->url()}" class="form" role="form">
+            <form name="f_restaurar_backup_sql" method="POST" action="{$fsc->url()}" class="form" role="form">
                 <div class="modal-header">
-                    <button type="button" class="close" onclick="document.f_restaurar_backup.restore_file.value = ''" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <button type="button" class="close" onclick="document.f_restaurar_backup_sql.restore_file.value = ''" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h4 class="modal-title text-danger" id="advertenciaRestaurar"><span class="fa fa-warning"></span>&nbsp;Advertencia</h4>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="restore_file" value="">
-                    Esta seguro que quiere utilizar este backup para restaurar.<br />
-                    Haciendo esto se eliminará cualquier información que se haya generado despues de que se creó este backup.
+                    Está seguro que quiere utilizar este backup de base de datos de FacturaScripts para restaurar?<br />
+                    Haciendo esto se eliminará cualquier información que se haya generado después de que se creó este backup de base de datos.
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal" onclick="document.f_restaurar_backup.restore_file.value = ''">Cerrar</button>
-                    <button type="submit" name="accion" value="restaurar" class="btn btn-danger">Restaurar</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal" onclick="document.f_restaurar_backup_sql.restore_file.value = ''">Cerrar</button>
+                    <button type="submit" name="accion" value="restaurardb" class="btn btn-danger">Restaurar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="advertenciaRestaurarFS" tabindex="-1" role="dialog" aria-labelledby="advertenciaRestaurarFS">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form name="f_restaurar_backup_fs" method="POST" action="{$fsc->url()}" class="form" role="form">
+                <div class="modal-header">
+                    <button type="button" class="close" onclick="document.f_restaurar_backup_fs.restore_file.value = ''" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title text-danger" id="advertenciaRestaurar"><span class="fa fa-warning"></span>&nbsp;Advertencia</h4>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="restore_file" value="">
+                    Está seguro que quiere utilizar este backup de archivos de FacturaScripts para restaurar?<br />
+                    Haciendo esto se eliminará cualquier información que se haya generado después de que se creó este backup de archivos.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" onclick="document.f_restaurar_backup_fs.restore_file.value = ''">Cerrar</button>
+                    <button type="submit" name="accion" value="restaurarfs" class="btn btn-danger">Restaurar</button>
                 </div>
             </form>
         </div>
