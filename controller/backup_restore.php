@@ -254,7 +254,7 @@ class backup_restore extends fs_controller {
             $archivo->path = $file->getPathName();
             // FIXME Revisar para no tener que pasar el valor por duplicado
             $archivo->escaped_path = addslashes($file->getPathName());
-            $archivo->size = filesize($file->getPathName());
+            $archivo->size = self::tamano(filesize($file->getPathName()));
             $archivo->date = date('Y-m-d', filemtime($file->getPathName()));
             $archivo->type = $file->getExtension();
             $archivo->file = TRUE;
@@ -268,6 +268,14 @@ class backup_restore extends fs_controller {
 
    public function url() {
       return parent::url();
+   }
+   
+   public function tamano($tamano) {
+      $bytes = $tamano;
+      $decimals = 2;
+      $sz = array('B', 'K', 'M', 'G', 'T', 'P');
+      $factor = floor((strlen($bytes) - 1) / 3);
+      return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $sz[$factor];
    }
 
    private static function folderToZip($folder, &$zipFile, $exclusiveLength) {
