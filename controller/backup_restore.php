@@ -129,7 +129,6 @@ class backup_restore extends fs_controller {
                   echo json_encode(array('success' => false, 'mensaje' => "No se puede escribir el archivo " . $this->destino));
                } else {
                   $zip->open($this->destino, \ZipArchive::CREATE);
-                  $zip->addEmptyDir($this->basepath);
                   self::folderToZip($this->basepath, $zip, strlen("$this->basepath/"));
                   $zip->close();
 
