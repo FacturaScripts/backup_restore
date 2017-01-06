@@ -69,7 +69,8 @@ class PostgresqlProcess {
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
             $zip->open($this->destino, \ZipArchive::CREATE);
-            $zip->addFile($this->filename);
+            $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+            $zip->addGlob($this->filename, GLOB_BRACE, $options);
             $zip->close();
             if (file_exists($this->filename)) {
                unlink($this->filename);
