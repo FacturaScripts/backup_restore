@@ -99,7 +99,7 @@ class MysqlProcess {
             $zip->addGlob($this->filename, GLOB_BRACE, $options);
             $zip->close();
             
-            unlink($this->filneame);
+            unlink($this->filename);
             unlink($access_file);
          }
          return (!empty($cmdout)) ? $cmdout[0] : $this->destino;
