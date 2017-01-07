@@ -80,13 +80,13 @@ class DatabaseManager {
 
       $this->config_file['configuracion']['dbms'] = $this->dbms;
       $this->config_file['configuracion']['type'] = ($this->onlydata)?"data":"full";
-      $this->config_file['configuracion']['create_database'] = ($this->createdb)?true:false;
-      $this->config_file['configuracion']['only_data'] = ($this->onlydata)?true:false;
-      $this->config_file['configuracion']['no_data'] = ($this->nodata)?true:false;
       $this->config_file['configuracion']['date_backup'] = $this->year.'-'.$this->month.'-'.$this->day;
    }
 
    public function createBackup($tipo = false) {
+      $this->config_file['configuracion']['create_database'] = ($this->createdb)?true:false;
+      $this->config_file['configuracion']['only_data'] = ($this->onlydata)?true:false;
+      $this->config_file['configuracion']['no_data'] = ($this->nodata)?true:false;
       switch ($this->dbms) {
          case "MYSQL":
             $dbHandler = new MysqlProcess;
