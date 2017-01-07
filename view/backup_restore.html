@@ -303,6 +303,26 @@
                             {/if}
                         </div>
                     </div>
+                    <div class="form-group col-sm-12">
+                        <label for="restore_comando_data" class="control-label">Comando para restore solo datos:</label>
+                        <input class="form-control" type="text" name="restore_comando_data" id="restore_comando_data" value="{$fsc->restore_comando_data}" autocomplete="off"/>
+                    </div>
+                    <div class="col-sm-12">
+                        <div class="help-block text-justify">
+                            {if="$fsc->restore_comando_data"}
+                            <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->restore_comando_data}</div>
+                            {else}
+                            <span class="text-danger">No se encuentra una herramienta para restaurar copia de seguridad.</span>
+                            Aquí debes configurar si no se detectó automáticamente el comando para ejecutar el restore de
+                            de la base de datos, el comando suele ser mysql o pg_restore, pero debes colocar su ruta completa.
+                            Por ejemplo:
+                            <ul>
+                                <li><code>/usr/src/local/mysqlimport</code></li>
+                                <li><code>C:\Archivos de programa\PostgreSQL\9.3\bin\pg_restore.exe</code></li>
+                            </ul>
+                            {/if}
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-sm btn-primary" type="submit" name="accion" value="configuracion" onclick="this.disabled = true;

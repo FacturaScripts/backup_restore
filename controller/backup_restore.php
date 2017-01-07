@@ -38,6 +38,7 @@ class backup_restore extends fs_controller {
    public $backupfs_file_now;
    public $backup_comando;
    public $restore_comando;
+   public $restore_comando_data;
    public $backup_setup;
    public $db_version;
 
@@ -69,6 +70,7 @@ class backup_restore extends fs_controller {
 
       $this->backup_comando = $this->backup_setup['backup_comando'];
       $this->restore_comando = $this->backup_setup['restore_comando'];
+      $this->restore_comando_data = $this->backup_setup['restore_comando_data'];
 
       $this->basepath = dirname(dirname(dirname(__DIR__)));
       $this->path = self::backups_path;
@@ -201,25 +203,31 @@ class backup_restore extends fs_controller {
               array(
           'backup_comando' => '',
           'restore_comando' => '',
+          'restore_comando_data' => '',
               ), TRUE
       );
 
       $nombre = filter_input(INPUT_POST, 'backup_comando');
-      $cmd = $this->buscarCmd($nombre, true);
+      $cmd = $this->buscarCmd($nombre, true, false);
       $comando_backup = ($cmd) ? trim($cmd) : $this->backup_setup['backup_comando'];
 
       $nombre = filter_input(INPUT_POST, 'restore_comando');
-      $cmd = $this->buscarCmd($nombre, false);
+      $cmd = $this->buscarCmd($nombre, false, false);
       $comando_restore = ($cmd) ? trim($cmd) : $this->backup_setup['restore_comando'];
+
+      $nombre = filter_input(INPUT_POST, 'restore_comando_data');
+      $cmd = $this->buscarCmd($nombre, false, true);
+      $comando_restore_data = ($cmd) ? trim($cmd) : $this->backup_setup['restore_comando_data'];
 
       $backup_config = array(
           'backup_comando' => $comando_backup,
-          'restore_comando' => $comando_restore
+          'restore_comando' => $comando_restore,
+          'restore_comando_data' => $comando_restore_data
       );
       $this->fsvar->array_save($backup_config);
    }
 
-   private function buscarCmd($comando, $backup = TRUE) {
+   private function buscarCmd($comando, $backup = TRUE, $onlydata = FALSE) {
       if (isset($comando)) {
          $resultado = array();
          exec("$comando --version", $resultado);
@@ -229,7 +237,7 @@ class backup_restore extends fs_controller {
             return false;
          }
       } else {
-         $paths = $this->osPath($backup);
+         $paths = $this->osPath($backup, $onlydata);
 
          foreach ($paths as $cmd) {
             $lanza_comando = '"' . "$cmd" . '"' . " --version";
@@ -241,17 +249,21 @@ class backup_restore extends fs_controller {
       }
    }
 
-   private function osPath($backup = TRUE) {
+   private function osPath($backup = TRUE, $onlydata = FALSE) {
       $paths = array();
       $db_version = explode(" ", $this->db->version());
       $version[0] = substr($db_version[1], 0, 1);
       $version[1] = intval(substr($db_version[1], 1, 2));
       if (PHP_OS == "WINNT") {
-         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump.exe', 'pg_restore') : array('mysqldump.exe', 'mysql.exe');
+         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump.exe', 'pg_restore.exe', 'pg_restore.exe') : array('mysqldump.exe', 'mysql.exe', 'mysqlimport.exe');
          if ($backup == TRUE) {
             $comando = $comando[0];
          } else {
-            $comando = $comando[1];
+            if($onlydata){
+               $comando = $comando[2];
+            } else {
+               $comando = $comando[1];
+            }
          }
          $base_dir = str_replace(" (x86)", "", getenv("PROGRAMFILES")) . "\\";
          $base_dirx86 = getenv("PROGRAMFILES") . "\\";
@@ -260,11 +272,15 @@ class backup_restore extends fs_controller {
          $paths[] = $base_dir . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])) . " Server " . $version[0] . "." . $version[1] . "\\exe\\" . $comando;
          $paths[] = $base_dirx86 . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])) . " Server " . $version[0] . "." . $version[1] . "\\exe\\" . $comando;
       } else {
-         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump', 'pg_restore') : array('mysqldump', 'mysql');
+         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump', 'pg_restore', 'pg_restore') : array('mysqldump', 'mysql', 'mysqlimport');
          if ($backup == TRUE) {
             $comando = $comando[0];
          } else {
-            $comando = $comando[1];
+            if($onlydata){
+               $comando = $comando[2];
+            } else {
+               $comando = $comando[1];
+            }
          }
          $paths[] = "/usr/bin/" . $comando;
       }
