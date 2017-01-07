@@ -20,9 +20,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once 'plugins/backup_restore/vendor/Artesanik/DatabaseManager.php';
+require_once 'plugins/backup_restore/vendor/FacturaScripts/DatabaseManager.php';
 
-use Artesanik\DatabaseManager;
+use FacturaScripts\DatabaseManager;
 
 class backup_restore extends fs_controller {
 
@@ -34,7 +34,8 @@ class backup_restore extends fs_controller {
    public $fsvar;
    public $basepath;
    public $path;
-   public $backup_file_now;
+   public $backupdb_file_now;
+   public $backupfs_file_now;
    public $backup_comando;
    public $restore_comando;
    public $backup_setup;
@@ -74,19 +75,14 @@ class backup_restore extends fs_controller {
 
       // Interfaz para cargar
       $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
-      require_once 'plugins/backup_restore/vendor/Artesanik/DBProcess/' . $dbInterface . 'Process.php';
+      require_once 'plugins/backup_restore/vendor/FacturaScripts/DBProcess/' . $dbInterface . 'Process.php';
 
       //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
-      $this->backup_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_NAME . "_" . \date("Ymd") . ".zip");
+      $this->backupdb_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_TYPE.'_'.FS_DB_NAME. "_" . \date("Ymd") . ".zip");
+      $this->backupfs_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . "FS_" . \date("Ymd") . ".zip");
 
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
-         if (filter_input(INPUT_POST, 'estructura') == "true") {
-            $db_solodatos = false;
-         } else {
-            $db_solodatos = true;
-         }
-
          $manager = new DatabaseManager([
              'dbms' => FS_DB_TYPE,
              'host' => FS_DB_HOST,
@@ -94,13 +90,19 @@ class backup_restore extends fs_controller {
              'user' => FS_DB_USER,
              'pass' => FS_DB_PASS,
              'dbname' => FS_DB_NAME,
-             'onlydata' => $db_solodatos,
-             'command' => ($accion == 'agregardb') ? $this->backup_comando : $this->restore_comando,
+             'command' => ($accion == 'backupdb') ? $this->backup_comando : $this->restore_comando,
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::backups_path . DIRECTORY_SEPARATOR . self::sql_path
          ]);
          switch ($accion) {
-            case "agregardb":
+            case "backupdb":
                $this->template = false;
+               $crear_db = filter_input(INPUT_POST, 'crear_db');
+               $estructura = filter_input(INPUT_POST, 'estructura');
+               $solo_datos = filter_input(INPUT_POST, 'solo_datos');
+               //Colocamos en el DatabaseManager las variables específicas para hacer el backup
+               $manager->createdb = ($crear_db)?true:false;
+               $manager->onlydata = ($estructura)?false:true;
+               $manager->nodata = ($solo_datos)?false:true;
                try {
                   $backup = $manager->createBackup('full');
                   if (file_exists($backup)) {
@@ -130,7 +132,7 @@ class backup_restore extends fs_controller {
             case "configuracion":
                $this->configurar();
                break;
-            case "agregarfs":
+            case "backupfs":
                $this->file = self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . 'FS_' . date("Ymd") . '.zip';
                $this->destino = $this->basepath . DIRECTORY_SEPARATOR . $this->file;
                $zip = new \ZipArchive();
@@ -275,6 +277,8 @@ class backup_restore extends fs_controller {
          if ($file->isDot()) {
             continue;
          } elseif ($file->isFile()) {
+            //verificamos si el archivo ez un zip y si tiene un config.json
+            $informacion = $this->getConfigFromFile($dir,$file);
             $archivo = new stdClass();
             $archivo->filename = $file->getFilename();
             $archivo->path = $file->getPathName();
@@ -284,6 +288,7 @@ class backup_restore extends fs_controller {
             $archivo->date = date('Y-m-d', filemtime($file->getPathName()));
             $archivo->type = $file->getExtension();
             $archivo->file = TRUE;
+            $archivo->conf = $informacion;
             $results[] = $archivo;
          } elseif ($file->isDir()) {
             $this->getFiles($dir . DIRECTORY_SEPARATOR . $file);
@@ -304,12 +309,33 @@ class backup_restore extends fs_controller {
       return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $sz[$factor];
    }
 
+   private function getConfigFromFile($dir, $file){
+      if($file->getExtension()=='zip'){
+         $z = new ZipArchive();
+         if ($z->open($dir.'/'.$file->getFilename())) {
+            $contents = '';
+            $fp = $z->getStream('config.json');
+            if($fp){
+               while (!feof($fp)) {
+                  $contents .= fread($fp, 2);
+               }
+               fclose($fp);
+               return json_decode($contents);
+            }
+         }else{
+            return false;
+         }
+      }else{
+         return false;
+      }
+   }
+
    private static function folderToZip($folder, &$zipFile, $exclusiveLength) {
       $handle = opendir($folder);
       while (false !== $f = readdir($handle)) {
          if ($f != '.' && $f != '..') {
             $filePath = "$folder/$f";
-            // Remove prefix from file path before add to zip. 
+            // Remove prefix from file path before add to zip.
             $localPath = substr($filePath, $exclusiveLength);
             if (is_file($filePath)) {
                $zipFile->addFile($filePath, $localPath);
@@ -318,7 +344,7 @@ class backup_restore extends fs_controller {
                   // Contiene self::fs_files_path
                   // No queremos backup de backups, pero si queremos backups de sql
                } else {
-                  // Add sub-directory. 
+                  // Add sub-directory.
                   $zipFile->addEmptyDir($localPath);
                   self::folderToZip($filePath, $zipFile, $exclusiveLength);
                }

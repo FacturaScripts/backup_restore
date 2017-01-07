@@ -2,21 +2,77 @@
 
 <script>
     var backup_cmd = '{$fsc->backup_comando}';
-    var backup_file_now = '{$fsc->backup_file_now}';
-    var chkval = true;
+    var backupdb_file_now = '{$fsc->backupdb_file_now}';
+    var backupfs_file_now = '{$fsc->backupfs_file_now}';
+    var msg_error_db = "Ocurrió un error no contemplado intentando hacer una copia de seguridad de la base de datos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.";
+    var msg_error_fs = "Ocurrió un error no contemplado intentando hacer una copia de seguridad de los archivos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.";
 
-    function crear_backup_db() {
+    function crear_backup(){
+        var crear_db = document.getElementById('crear_db').checked;
+        var estructura = document.getElementById('estructura').checked;
+        var solo_datos = document.getElementById('solo_datos').checked;
+        var archivos = document.getElementById('backup_fs').checked;
+        var backup_db = false;
+        //Verificamos que hayan llegado valores
+        if(!crear_db && !estructura && !solo_datos && !archivos){
+            alert('¡No se seleccionó ninguna opción válida!');
+        //Si solo llegaron valores para Crear DB y Estructura pero el de datos
+        //llegó vacio, solicitamos confirmación al usuario de que esto es correcto.
+        }else if((crear_db || estructura) && !solo_datos){
+            var backup_solo_estructura = confirm('¿Esta seguro que quiere hacer un backup sin datos?');
+            if(backup_solo_estructura){
+                //si el usuario dice que si entonces indicamos que es verdad que se va hacer un backup de DB
+                backup_db = true;
+            }
+        //En cualquier otro caso indicamos que el backup de DB es true si se cumple cualquiera de los
+        //otros casos ya sea que pidieron pero siempre confirmamos el solo_datos
+        }else if((crear_db || estructura || solo_datos) && solo_datos){
+            backup_db = true;
+        }
+        //Llamamos al backup de base de datos
+        if(backup_db){
+            if (backup_cmd !== '' && backupdb_file_now === '') {
+                crear_backup_db(crear_db,estructura,solo_datos);
+            } else if (backup_cmd !== '' && backupdb_file_now !== '') {
+                confirmacion = confirm('¿Ya hay una Copia de Base de Datos con la fecha actual, está seguro que quiere generarla nuevamente?');
+                if (confirmacion) {
+                    crear_backup_db(crear_db,estructura,solo_datos);
+                }
+            } else {
+                alert('¡Primero debe configurar el comando para realizar el backup!');
+            }
+        }
+        //Llamamos al backup de archivos
+        if(archivos){
+            if (backupfs_file_now === '') {
+                $('#fade').show();
+                $('#tarea').html('Procesando archivos...');
+                $('#loading-indicator').show();
+                crear_backup_fs();
+            } else {
+                confirmacion = confirm('¿Ya hay una Copia de Archivos con la fecha actual, está seguro que quiere generarla nuevamente?');
+                if (confirmacion) {
+                    $('#fade').show();
+                    $('#tarea').html('Procesando archivos...');
+                    $('#loading-indicator').show();
+                    crear_backup_fs();
+                }
+            }
+        }
+        window.location.assign("{$fsc->url()}");
+    }
+
+    function crear_backup_db(crear_db,estructura,datos) {
         $.ajax({
             type: 'POST',
             url: '{$fsc->url()}',
             async: false,
-            data: 'accion=agregardb&estructura=' + chkval,
+            data: 'accion=backupdb&crear_db='+crear_db+'&estructura='+estructura+'&solo_datos='+datos,
             success: function (datos) {
                 alert(datos.mensaje);
-                window.location.assign("{$fsc->url()}");
             },
             error: function () {
-                alert("Ocurrió un error no contemplado en el plugin intentando hacer una copia de seguridad de la base de datos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+                alert(msg_error_db);
             }
         });
     }
@@ -26,40 +82,18 @@
             type: 'POST',
             url: '{$fsc->url()}',
             async: false,
-            data: 'accion=agregarfs',
+            data: 'accion=backupfs',
             success: function (datos) {
+                $('#fade').hide();
+                $('#loading-indicator').hide();
+                $('#tarea').html('');
                 alert(datos.mensaje);
-                window.location.assign("{$fsc->url()}");
             },
             error: function () {
-                alert("Ocurrio un error no contemplado en el plugin intentando hacer una copia de seguridad de los archivos de FacturaScripts, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
-            }
-        });
-    }
-
-    function crear_fullbackup() {
-        // Backup sql
-        $.ajax({
-            type: 'POST',
-            url: '{$fsc->url()}',
-            async: false,
-            data: 'accion=agregardb&estructura=' + chkval,
-            error: function () {
-                alert("Ocurrió un error no contemplado en el plugin intentando hacer una copia de seguridad completa (paso base de datos), por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
-            }
-        });
-        // Backup archivos
-        $.ajax({
-            type: 'POST',
-            url: '{$fsc->url()}',
-            async: false,
-            data: 'accion=agregarfs',
-            success: function () {
-                alert("Copia de seguridad de la base de datos y de archivos realizada con éxito!");
-                window.location.assign("{$fsc->url()}");
-            },
-            error: function () {
-                alert("Ocurrio un error no contemplado en el plugin intentando hacer una copia de seguridad completa (paso archivos), por favor envie un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+                $('#fade').hide();
+                $('#loading-indicator').hide();
+                $('#tarea').html('');
+                alert(msg_error_fs);
             }
         });
     }
@@ -67,7 +101,7 @@
     function preparar_eliminar_archivo(valor) {
         document.f_delete.delete_file.value = valor;
         document.getElementById('delete_filename').innerHTML = valor;
-        $('#advertenciaEliminarArchivo').modal('show')
+        $('#advertenciaEliminarArchivo').modal('show');
     }
 
     function c_dbStructCopy(valor) {
@@ -81,38 +115,9 @@
             document.f_configuracion.backup_comando.focus();
         });
 
-        $("#b_nuevo_backup_db").click(function (event) {
-            if (backup_cmd !== '' && backup_file_now === '') {
-                crear_backup_db();
-            } else if (backup_cmd !== '' && backup_file_now !== '') {
-                confirmacion = confirm('¿Ya hay un backup con la fecha actual, está seguro que quiere generarlo nuevamente?');
-                if (confirmacion) {
-                    crear_backup_db();
-                }
-            } else {
-                alert('¡Primero debe configurar el comando para realizar el backup!');
-            }
-        });
-
-        $("#b_nuevo_backup_fs").click(function (event) {
-            if (backup_file_now === '') {
-                crear_backup_fs();
-            } else {
-                confirmacion = confirm('¿Ya hay un backup con la fecha actual, está seguro que quiere generarlo nuevamente?');
-                if (confirmacion) {
-                    crear_backup_fs();
-                }
-            }
-        });
-
-        $("#b_nuevo_fullbackup").click(function (event) {
-            if (backup_cmd !== '' && backup_file_now === '') {
-                crear_fullbackup();
-            } else if (backup_cmd !== '' && backup_file_now !== '') {
-                confirmacion = confirm('¿Ya hay un backup con la fecha actual, está seguro que quiere generarlo nuevamente?');
-                if (confirmacion) {
-                    crear_fullbackup();
-                }
+        $("#b_nuevo_backup").click(function (event) {
+            if (backup_cmd !== '' ) {
+                crear_backup();
             } else {
                 alert('¡Primero debe configurar el comando para realizar el backup!');
             }
@@ -143,17 +148,9 @@
             </span>
         </div>
         <div class="btn-group">
-            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#advertenciaBackupSQL">
+            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#nuevoBackup">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                <span class="hidden-xs">&nbsp; Copia DB</span>
-            </button>
-            <a class="btn btn-sm btn-success" aria-label="Nueva copia" id="b_nuevo_backup_fs">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                <span class="hidden-xs">&nbsp; Copia FS</span>
-            </a>
-            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#advertenciaFullBackup">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                <span class="hidden-xs">&nbsp; Copia completa</span>
+                <span class="hidden-xs">&nbsp; Nueva Copia</span>
             </button>
         </div>
     </div>
@@ -171,7 +168,7 @@
                 <tr>
                     <th>Nombre</th>
                     <th>Tipo</th>
-                    <th>Ubicación</th>
+                    <th>Información</th>
                     <th>Tamaño</th>
                     <th>Fecha</th>
                     <th class="text-center" style="min-width:125px">Acciones</th>
@@ -182,7 +179,17 @@
                 <tr>
                     <td class="text-left">{$value->filename}</td>
                     <td class="text-left">Base de datos</td>
-                    <td class="text-left">{$value->path}</td>
+                    <td class="text-left">
+                        {if="$value->conf"}
+                        <span class="label label-sm label-info col-sm-4">DB:</span> {$value->conf->configuracion->dbms}<br/>
+                        <span class="label label-sm label-info col-sm-4">Tipo Backup:</span> {$value->conf->configuracion->type}<br/>
+                        <span class="label label-sm label-info col-sm-4">Crear DB:</span> {if="$value->conf->configuracion->create_database"}SI{else}NO{/if}<br/>
+                        <span class="label label-sm label-info col-sm-4">Crear Estructura:</span> {if="$value->conf->configuracion->only_data"}NO{else}SI{/if}<br/>
+                        <span class="label label-sm label-info col-sm-4">Con datos:</span> {if="$value->conf->configuracion->no_data"}NO{else}SI{/if}<br/>
+                        <span class="label label-sm label-info col-sm-4">Fecha Backup:</span> {$value->conf->configuracion->date_backup}
+
+                        {/if}
+                    </td>
                     <td class="text-left">{$value->size}</td>
                     <td class="text-left">{$value->date}</td>
                     <td class="text-center">
@@ -309,141 +316,68 @@
     </div>
 </div>
 
-<!-- Modal FullBackup -->
-<div class="modal fade bs-example-modal-lg" id="advertenciaFullBackup" tabindex="-1" role="dialog" aria-labelledby="advertenciaFullBackup">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <form name="f_fullbackup" method="POST" action="{$fsc->url()}" class="form" role="form">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title text-info" id="advertenciaBackup">
-                        <span class="fa fa-info"></span>
-                        <span>&nbsp; Opciones del backup completo</span>
-                    </h4>
-                </div>
-                <div class="modal-body">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h3 class="panel-title">Opciones avanzadas</h3>
-                        </div>
-                        <div class="panel-body">
-                            <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
-                                <div class="panel panel-default">
-                                    <div class="panel-heading" role="tab" id="headingOne">
-                                        <h4 class="panel-title">
-                                            <a role="button" class="collapsed" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                                Estructura y datos / Sólo datos
-                                            </a>
-                                        </h4>
-                                    </div>
-                                    <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
-                                        <div class="panel-body">
-                                            <div class="form-group">
-                                                <label class="checkbox-inline" style="margin-left: 15px;">
-                                                    <input type="checkbox" name="dbStructCopy" onchange="{c_dbStructCopy(this.checked)}" value="TRUE" checked=""/>
-                                                    Copia estructura y datos
-                                                </label>
-                                            </div>
-                                            <div>
-                                                <ul>
-                                                    <li>Activada, se copiará la base de datos y su estructura. <b>(Opción por defecto)</b></li>
-                                                    <li>Desactivada, sólo se copiarán los datos.</li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Añadir más opciones aquí -->
-                        </div>
-                        <div class="panel-footer">
-                            <span class="text-info">
-                                <span class="fa fa-info">&nbsp;</span>
-                                <span>No es necesario cambiar ninguna opción.</span>
-                            </span>
-                            <br/>
-                            <span class="text-danger">
-                                <span class="fa fa-warning">&nbsp;</span>
-                                <span><b>Sino sabes lo que implican estas opciones no las modifiques.</b></span>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <a class="btn btn-sm btn-success" aria-label="Iniciar copia completa" id="b_nuevo_fullbackup">
-                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                        <span class="hidden-xs">&nbsp; Iniciar copia completa</span>
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Backup SQL -->
-<div class="modal fade bs-example-modal-lg" id="advertenciaBackupSQL" tabindex="-1" role="dialog" aria-labelledby="advertenciaBackupSQL">
+<div class="modal fade bs-example-modal-lg" id="nuevoBackup" tabindex="-1" role="dialog" aria-labelledby="nuevoBackupTitle">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <form name="f_backup_sql" method="POST" action="{$fsc->url()}" class="form" role="form">
+            <form name="f_backup" method="POST" action="{$fsc->url()}" class="form" role="form">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title text-info" id="advertenciaBackup">
-                        <span class="fa fa-info"></span>
-                        <span>&nbsp; Opciones del backup</span>
+                    <h4 class="modal-title text-info" id="nuevoBackupTitle">
+                        <span class="fa fa-info-circle"></span>
+                        <span>&nbsp;Copias de Seguridad</span>
                     </h4>
+                    <p class="help-block text-justify">La Copias de Seguridad por defecto se genera con el nombre de la base de datos actual, la estructura de las tablas y los datos de la misma</p>
+                    <p class="help-block text-justify">Si necesitas modificar esto lo puedes hacer marcando o desmarcando las opciones de Base de Datos.</p>
+                    <p class="help-block text-justify">Si necesitas hacer solo una copia de seguridad de los archivos de FacturaScripts,
+                        selecciona el check de Archivos de FacturaScripts y quita los checks a las opciones de Base de Datos.</p>
+                    <p class="help-block text-justify">Puedes Seleccionar tanto Bases de Datos como Archivos de FacturaScripts para una copia de seguridad completa</p>
                 </div>
                 <div class="modal-body">
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            <h3 class="panel-title">Opciones avanzadas</h3>
+                            <h3 class="panel-title">Opciones de Base de Datos</h3>
                         </div>
                         <div class="panel-body">
-                            <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
-                                <div class="panel panel-default">
-                                    <div class="panel-heading" role="tab" id="headingOne">
-                                        <h4 class="panel-title">
-                                            <a role="button" class="collapsed" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                                Estructura y datos / Sólo datos
-                                            </a>
-                                        </h4>
-                                    </div>
-                                    <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
-                                        <div class="panel-body">
-                                            <div class="form-group">
-                                                <label class="checkbox-inline" style="margin-left: 15px;">
-                                                    <input type="checkbox" name="dbStructCopy" onchange="{c_dbStructCopy(this.checked)}" value="TRUE" checked=""/>
-                                                    Copia estructura y datos
-                                                </label>
-                                            </div>
-                                            <div>
-                                                <ul>
-                                                    <li>Activada, se copiará la base de datos y su estructura. <b>(Opción por defecto)</b></li>
-                                                    <li>Desactivada, sólo se copiarán los datos.</li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="form-group">
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" id="crear_db" name="crear_db" value="TRUE" checked=""> Crear Base de Datos
+                                </label>
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" id="estructura" name="estructura" value="TRUE" checked=""> Con Estructura de tablas
+                                </label>
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" id="solo_datos" name="solo_datos" value="TRUE" checked=""> Solo Datos
+                                </label>
                             </div>
-                            <!-- Añadir más opciones aquí -->
+                        </div>
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Opciones de Archivos de FacturaScripts</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" id="backup_fs" name="backup_fs" value="TRUE"> Archivos de FacturaScripts
+                                </label>
+                            </div>
                         </div>
                         <div class="panel-footer">
                             <span class="text-info">
-                                <span class="fa fa-info">&nbsp;</span>
+                                <span class="fa fa-info-circle">&nbsp;</span>
                                 <span>No es necesario cambiar ninguna opción.</span>
                             </span>
                             <br/>
                             <span class="text-danger">
                                 <span class="fa fa-warning">&nbsp;</span>
-                                <span><b>Sino sabes lo que implican estas opciones no las modifiques.</b></span>
+                                <span><b>Sino estas seguro a que se refieren estas opciones, solo dale click al boton de Iniciar Copia de DB.</b></span>
                             </span>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <a class="btn btn-sm btn-success" aria-label="Iniciar copia" id="b_nuevo_backup_db">
-                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                        <span class="hidden-xs">&nbsp; Iniciar copia</span>
+                    <a class="btn btn-sm btn-success pull-right" aria-label="Iniciar copia" id="b_nuevo_backup">
+                        <span class="fa fa-plus" aria-hidden="true"></span>
+                        <span class="hidden-xs">&nbsp; Iniciar Copia</span>
                     </a>
                 </div>
             </form>
@@ -533,5 +467,12 @@
             </form>
         </div>
     </div>
+</div>
+<!-- Indicador de loading -->
+<div id="fade" style="display: none; position:absolute; top: 0%; left: 0%; width: 100%; height: 100%; background-color: #ababab; z-index: 10001; -moz-opacity: 0.8; opacity: .70; filter: alpha(opacity=80);">
+</div>
+<div id="loading-indicator" style="display: none; position: absolute; top: 45%; left: 40%; width: 350px; height: 90px; padding:30px 15px 0px; border: 3px solid #ababab; box-shadow:1px 1px 10px #ababab; border-radius:5px; background-color: white; z-index: 10004; text-align:center; overflow: auto;">
+    <span id="tarea" class="text-warning"></span><br/>
+    <img src="plugins/backup_restore/view/images/loading.gif"/>
 </div>
 {include="footer"}
