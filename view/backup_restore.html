@@ -37,6 +37,37 @@
         });
     }
 
+    function crear_fullbackup() {
+        // Backup sql
+        $.ajax({
+            type: 'POST',
+            url: '{$fsc->url()}',
+            async: false,
+            data: 'accion=agregardb&estructura=' + chkval,
+            success: function (datos) {
+                alert("Paso 1: " + datos.mensaje);
+                //window.location.assign("{$fsc->url()}");
+            },
+            error: function () {
+                alert("Ocurrió un error no contemplado en el plugin, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+            }
+        });
+        // Backup archivos
+        $.ajax({
+            type: 'POST',
+            url: '{$fsc->url()}',
+            async: false,
+            data: 'accion=agregarfs',
+            success: function (datos) {
+                alert("Paso 2: " + datos.mensaje);
+                window.location.assign("{$fsc->url()}");
+            },
+            error: function () {
+                alert("Ocurrio un error no contemplado en el plugin, por favor envie un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+            }
+        });
+    }
+
     function c_dbStructCopy(valor) {
         chkval = valor;
     }
@@ -71,6 +102,19 @@
                 }
             }
         });
+
+        $("#b_nuevo_fullbackup").click(function (event) {
+            if (backup_cmd !== '' && backup_file_now === '') {
+                crear_fullbackup();
+            } else if (backup_cmd !== '' && backup_file_now !== '') {
+                confirmacion = confirm('¿Ya hay un backup con la fecha actual, está seguro que quiere generarlo nuevamente?');
+                if (confirmacion) {
+                    crear_fullbackup();
+                }
+            } else {
+                alert('¡Primero debe configurar el comando para realizar el backup!');
+            }
+        });
     });
 </script>
 
@@ -102,6 +146,10 @@
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                 <span class="hidden-xs">&nbsp; Copia FS</span>
             </a>
+            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#advertenciaFullBackup">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                <span class="hidden-xs">&nbsp; Copia completa</span>
+            </button>
         </div>
     </div>
     <div class="col-sm-5 col-xs-6 text-right">
@@ -256,6 +304,77 @@
     </div>
 </div>
 
+<!-- Modal FullBackup -->
+<div class="modal fade bs-example-modal-lg" id="advertenciaFullBackup" tabindex="-1" role="dialog" aria-labelledby="advertenciaFullBackup">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form name="f_fullbackup" method="POST" action="{$fsc->url()}" class="form" role="form">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title text-info" id="advertenciaBackup">
+                        <span class="fa fa-info"></span>
+                        <span>&nbsp; Opciones del backup completo</span>
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Opciones avanzadas</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading" role="tab" id="headingOne">
+                                        <h4 class="panel-title">
+                                            <a role="button" class="collapsed" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                                Estructura y datos / Sólo datos
+                                            </a>
+                                        </h4>
+                                    </div>
+                                    <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+                                        <div class="panel-body">
+                                            <div class="form-group">
+                                                <label class="checkbox-inline" style="margin-left: 15px;">
+                                                    <input type="checkbox" name="dbStructCopy" onchange="{c_dbStructCopy(this.checked)}" value="TRUE" checked=""/>
+                                                    Copia estructura y datos
+                                                </label>
+                                            </div>
+                                            <div>
+                                                <ul>
+                                                    <li>Activada, se copiará la base de datos y su estructura. <b>(Opción por defecto)</b></li>
+                                                    <li>Desactivada, sólo se copiarán los datos.</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Añadir más opciones aquí -->
+                        </div>
+                        <div class="panel-footer">
+                            <span class="text-info">
+                                <span class="fa fa-info">&nbsp;</span>
+                                <span>No es necesario cambiar ninguna opción.</span>
+                            </span>
+                            <br/>
+                            <span class="text-danger">
+                                <span class="fa fa-warning">&nbsp;</span>
+                                <span><b>Sino sabes lo que implican estas opciones no las modifiques.</b></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-sm btn-success" aria-label="Iniciar copia completa" id="b_nuevo_fullbackup">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        <span class="hidden-xs">&nbsp; Iniciar copia completa</span>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Backup SQL -->
 <div class="modal fade bs-example-modal-lg" id="advertenciaBackupSQL" tabindex="-1" role="dialog" aria-labelledby="advertenciaBackupSQL">
     <div class="modal-dialog modal-lg" role="document">
@@ -271,19 +390,48 @@
                 <div class="modal-body">
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            <h3 class="panel-title">Opciones del backup</h3>
+                            <h3 class="panel-title">Opciones avanzadas</h3>
                         </div>
                         <div class="panel-body">
-                            <div class="form-group">
-                                <label class="checkbox-inline" style="margin-left: 15px;">
-                                    <input type="checkbox" name="dbStructCopy" onchange="{c_dbStructCopy(this.checked)}" value="TRUE" checked=""/>
-                                    Copia estructura y datos.
-                                </label>
+                            <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+                                <div class="panel panel-default">
+                                    <div class="panel-heading" role="tab" id="headingOne">
+                                        <h4 class="panel-title">
+                                            <a role="button" class="collapsed" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                                Estructura y datos / Sólo datos
+                                            </a>
+                                        </h4>
+                                    </div>
+                                    <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+                                        <div class="panel-body">
+                                            <div class="form-group">
+                                                <label class="checkbox-inline" style="margin-left: 15px;">
+                                                    <input type="checkbox" name="dbStructCopy" onchange="{c_dbStructCopy(this.checked)}" value="TRUE" checked=""/>
+                                                    Copia estructura y datos
+                                                </label>
+                                            </div>
+                                            <div>
+                                                <ul>
+                                                    <li>Activada, se copiará la base de datos y su estructura. <b>(Opción por defecto)</b></li>
+                                                    <li>Desactivada, sólo se copiarán los datos.</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                            <!-- Añadir más opciones aquí -->
                         </div>
                         <div class="panel-footer">
-                            Activada, se copiará la base de datos y su estructura. <b>(Opción por defecto)</b><br/>
-                            Desactivada, sólo se copiarán los datos.
+                            <span class="text-info">
+                                <span class="fa fa-info">&nbsp;</span>
+                                <span>No es necesario cambiar ninguna opción.</span>
+                            </span>
+                            <br/>
+                            <span class="text-danger">
+                                <span class="fa fa-warning">&nbsp;</span>
+                                <span><b>Sino sabes lo que implican estas opciones no las modifiques.</b></span>
+                            </span>
                         </div>
                     </div>
                 </div>
