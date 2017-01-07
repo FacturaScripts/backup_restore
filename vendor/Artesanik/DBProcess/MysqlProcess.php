@@ -73,7 +73,10 @@ class MysqlProcess {
          fputs($fp, sprintf("user=%s", $db->user . "\n"));
          fputs($fp, sprintf("password=%s", $db->pass . "\n"));
          fclose($fp);
-         exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1", $cmdout);
+         if($db->onlydata)
+            exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --no-create-info --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1", $cmdout);
+         else
+            exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1", $cmdout);
          if (empty($cmdout)) {
             $fp = fopen($this->filename, "a");
             fputs($fp, sprintf("%s\n\r", "SET FOREIGN_KEY_CHECKS=1;"));

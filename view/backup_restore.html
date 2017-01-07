@@ -2,13 +2,14 @@
 <script>
     var backup_cmd = '{$fsc->backup_comando}';
     var backup_file_now = '{$fsc->backup_file_now}';
+    var chkval = true;
 
     function crear_backup_db() {
         $.ajax({
             type: 'POST',
             url: '{$fsc->url()}',
             async: false,
-            data: 'accion=agregardb',
+            data: 'accion=agregardb&estructura='+chkval,
             success: function (datos) {
                 alert(datos.mensaje);
                 window.location.assign("{$fsc->url()}");
@@ -33,6 +34,10 @@
                 alert("Ocurrio un error no contemplado en el plugin, por favor envie un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
             }
         });
+    }
+
+    function c_dbStructCopy(valor) {
+        chkval = valor;
     }
 
     $(document).ready(function () {
@@ -101,6 +106,12 @@
         <h2 style="margin-top: 0px;">
             <i class="fa fa-database" aria-hidden="true"></i> Copias de seguridad
         </h2>
+    </div>
+    <div class="form-group">
+        <label class="checkbox-inline" style="margin-left: 15px;">
+           <input type="checkbox" name="dbStructCopy" onchange="{c_dbStructCopy(this.checked)}" value="TRUE" checked=""/>
+           DB. Copia estructura y datos.
+        </label>
     </div>
 </div>
 

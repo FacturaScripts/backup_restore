@@ -43,6 +43,7 @@ class DatabaseManager {
    public $day;
    public $hour;
    public $min;
+   public $onlydata;
 
    public function __construct(array $info) {
       $this->dbms = $info['dbms'];
@@ -53,6 +54,7 @@ class DatabaseManager {
       $this->dbname = $info['dbname'];
       $this->command = $info['command'];
       $this->backupdir = $info['backupdir'];
+      $this->onlydata = $info['onlydata'];
       $today = getdate();
 
       $this->day = $today['mday'];
