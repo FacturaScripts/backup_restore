@@ -298,9 +298,14 @@ class backup_restore extends fs_controller {
             if (is_file($filePath)) {
                $zipFile->addFile($filePath, $localPath);
             } elseif (is_dir($filePath)) {
-               // Add sub-directory. 
-               $zipFile->addEmptyDir($localPath);
-               self::folderToZip($filePath, $zipFile, $exclusiveLength);
+               if (strpos($localPath, self::fs_files_path) !== false) {
+                  // Contiene self::fs_files_path
+                  // No queremos backup de backups, pero si queremos backups de sql
+               } else {
+                  // Add sub-directory. 
+                  $zipFile->addEmptyDir($localPath);
+                  self::folderToZip($filePath, $zipFile, $exclusiveLength);
+               }
             }
          }
       }
