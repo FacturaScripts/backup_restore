@@ -78,7 +78,7 @@
         $("#b_configuracion").click(function (event) {
             event.preventDefault();
             $("#modal_configuracion").modal('show');
-            document.f_configuracion.comando.focus();
+            document.f_configuracion.backup_comando.focus();
         });
 
         $("#b_nuevo_backup_db").click(function (event) {
@@ -259,7 +259,7 @@
                 <div class="modal-body">
                     <div class="form-group col-sm-12">
                         <label for="backup_comando" class="control-label">Comando para backup:</label>
-                        <input class="form-control" type="text" name="backup_comando" id="backup_comando" value="{$fsc->backup_comando}" autocomplete="off"/>
+                        <input class="form-control" type="text" name="backup_comando" id="backup_comando" value="{$fsc->backup_comando}" autocomplete="off" autofocus />
                     </div>
                     <div class="col-sm-12">
                         <div class="help-block text-justify">
