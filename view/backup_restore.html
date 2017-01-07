@@ -168,7 +168,7 @@
                 <tr>
                     <th>Nombre</th>
                     <th>Tipo</th>
-                    <th>Información</th>
+                    <th>Información/Ubicación</th>
                     <th>Tamaño</th>
                     <th>Fecha</th>
                     <th class="text-center" style="min-width:125px">Acciones</th>
@@ -187,7 +187,6 @@
                         <span class="label label-sm label-info col-sm-4">Crear Estructura:</span> {if="$value->conf->configuracion->only_data"}NO{else}SI{/if}<br/>
                         <span class="label label-sm label-info col-sm-4">Con datos:</span> {if="$value->conf->configuracion->no_data"}NO{else}SI{/if}<br/>
                         <span class="label label-sm label-info col-sm-4">Fecha Backup:</span> {$value->conf->configuracion->date_backup}
-
                         {/if}
                     </td>
                     <td class="text-left">{$value->size}</td>
