@@ -20,10 +20,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace Artesanik;
+namespace FacturaScripts;
 
-use Artesanik\DBProcess\MysqlProcess;
-use Artesanik\DBProcess\PostgresqlProcess;
+use FacturaScripts\DBProcess\MysqlProcess;
+use FacturaScripts\DBProcess\PostgresqlProcess;
 
 /**
  * Description of DatabaseManager

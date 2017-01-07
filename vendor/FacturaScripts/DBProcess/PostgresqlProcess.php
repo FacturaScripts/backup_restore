@@ -20,7 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace Artesanik\DBProcess;
+namespace FacturaScripts\DBProcess;
 
 /**
  * Description of PostgresqlProcess
@@ -54,7 +54,7 @@ class PostgresqlProcess {
     * Conectamos utilizando PDO para obtener las características de
     * mover información a archivos
     * @param type $db
-    * @return \Artesanik\DBProcess\PDO
+    * @return \FacturaScripts\DBProcess\PDO
     */
    private function connectDB($db) {
       $conn = new \PDO("pgsql:host=$db->host;port=$db->port;dbname=$db->dbname;user=$db->user;password=$db->pass");

@@ -20,7 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace Artesanik\DBProcess;
+namespace FacturaScripts\DBProcess;
 
 /**
  * Description of MysqlProcess
@@ -54,7 +54,7 @@ class MysqlProcess {
     * Conectamos utilizando PDO para obtener las carácteristicas de
     * mover información a archivos
     * @param type $db
-    * @return \Artesanik\DBProcess\PDO
+    * @return \FacturaScripts\DBProcess\PDO
     */
    private function connectDB($db) {
       $conn = new PDO('mysql:host=' . $db->host . ';port=' . $db->port . ';dbname=' . $db->dbname, $db->user, $db->pass, array(PDO::ATTR_PERSISTENT => false, PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
