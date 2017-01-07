@@ -82,9 +82,9 @@ class backup_restore extends fs_controller {
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
          if (filter_input(INPUT_POST, 'estructura') == "true") {
-            $db_estructura = true;
+            $db_solodatos = false;
          } else {
-            $db_estructura = false;
+            $db_solodatos = true;
          }
 
          $manager = new DatabaseManager([
@@ -94,7 +94,7 @@ class backup_restore extends fs_controller {
              'user' => FS_DB_USER,
              'pass' => FS_DB_PASS,
              'dbname' => FS_DB_NAME,
-             'onlydata' => $db_estructura,
+             'onlydata' => $db_solodatos,
              'command' => ($accion == 'agregardb') ? $this->backup_comando : $this->restore_comando,
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::backups_path . DIRECTORY_SEPARATOR . self::sql_path
          ]);
