@@ -3,6 +3,8 @@
 /*
  * This file is part of FacturaScripts
  * Copyright (C) 2016  Francesc Pineda Segarra     shawe.ewahs@gmail.com
+ * Copyright (C) 2016  Joe Nilson                  joenilson@gmail.com
+ * Copyright (C) 2016  Rafael Salas Venero         rsalas.match@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -45,6 +47,7 @@ class backup_restore extends fs_controller {
    protected function private_core() {
       $this->db_version = $this->db->version();
       $this->fsvar = new fs_var();
+
       //Si no existe el backups_path lo creamos
       if (!file_exists(self::backups_path)) {
          mkdir(self::backups_path);
@@ -78,10 +81,12 @@ class backup_restore extends fs_controller {
 
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
-         if(filter_input(INPUT_POST, 'estructura') == "true")
+         if (filter_input(INPUT_POST, 'estructura') == "true") {
             $db_estructura = true;
-         else
+         } else {
             $db_estructura = false;
+         }
+
          $manager = new DatabaseManager([
              'dbms' => FS_DB_TYPE,
              'host' => FS_DB_HOST,
@@ -154,7 +159,7 @@ class backup_restore extends fs_controller {
                   if ($zip->open($archivo) === TRUE) {
                      $zip->extractTo($this->basepath);
                      $zip->close();
-                     
+
                      $this->new_message('¡Backup de archivos de restaurado con exito!');
                   } else {
                      $this->new_error_msg('Ocurrió un error al querer restaurar el backup de archivos');
@@ -274,7 +279,7 @@ class backup_restore extends fs_controller {
    public function url() {
       return parent::url();
    }
-   
+
    public function tamano($tamano) {
       $bytes = $tamano;
       $decimals = 2;

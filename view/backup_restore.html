@@ -1,4 +1,5 @@
 {include="header"}
+
 <script>
     var backup_cmd = '{$fsc->backup_comando}';
     var backup_file_now = '{$fsc->backup_file_now}';
@@ -9,7 +10,7 @@
             type: 'POST',
             url: '{$fsc->url()}',
             async: false,
-            data: 'accion=agregardb&estructura='+chkval,
+            data: 'accion=agregardb&estructura=' + chkval,
             success: function (datos) {
                 alert(datos.mensaje);
                 window.location.assign("{$fsc->url()}");
@@ -72,6 +73,7 @@
         });
     });
 </script>
+
 <div class="container-fluid" style="margin-top: 10px;">
     <div class="col-sm-7 col-xs-6">
         <div class="btn-group">
@@ -92,10 +94,10 @@
             </span>
         </div>
         <div class="btn-group">
-            <a class="btn btn-sm btn-success" aria-label="Nueva copia" id="b_nuevo_backup_db">
+            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#advertenciaBackupSQL">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                 <span class="hidden-xs">&nbsp; Copia DB</span>
-            </a>
+            </button>
             <a class="btn btn-sm btn-success" aria-label="Nueva copia" id="b_nuevo_backup_fs">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                 <span class="hidden-xs">&nbsp; Copia FS</span>
@@ -106,12 +108,6 @@
         <h2 style="margin-top: 0px;">
             <i class="fa fa-database" aria-hidden="true"></i> Copias de seguridad
         </h2>
-    </div>
-    <div class="form-group">
-        <label class="checkbox-inline" style="margin-left: 15px;">
-           <input type="checkbox" name="dbStructCopy" onchange="{c_dbStructCopy(this.checked)}" value="TRUE" checked=""/>
-           DB. Copia estructura y datos.
-        </label>
     </div>
 </div>
 
@@ -197,8 +193,10 @@
         </table>
     </div>
 </div>
-<div class="modal fade" id="modal_configuracion" role="dialog">
-    <div class="modal-dialog">
+
+<!-- Modal Configuración -->
+<div class="modal fade bs-example-modal-lg" id="modal_configuracion" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <form name="f_configuracion" action="{$fsc->url()}" method="post" class="form-horizontal" role="form">
                 <div class="modal-header">
@@ -257,14 +255,60 @@
         </div>
     </div>
 </div>
-<!-- Modal -->
-<div class="modal fade" id="advertenciaRestaurarSQL" tabindex="-1" role="dialog" aria-labelledby="advertenciaRestaurarSQL">
-    <div class="modal-dialog" role="document">
+
+<!-- Modal Backup SQL -->
+<div class="modal fade bs-example-modal-lg" id="advertenciaBackupSQL" tabindex="-1" role="dialog" aria-labelledby="advertenciaBackupSQL">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form name="f_backup_sql" method="POST" action="{$fsc->url()}" class="form" role="form">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title text-info" id="advertenciaBackup">
+                        <span class="fa fa-info"></span>
+                        <span>&nbsp; Opciones del backup</span>
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Opciones del backup</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <label class="checkbox-inline" style="margin-left: 15px;">
+                                    <input type="checkbox" name="dbStructCopy" onchange="{c_dbStructCopy(this.checked)}" value="TRUE" checked=""/>
+                                    Copia estructura y datos.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="panel-footer">
+                            Activada, se copiará la base de datos y su estructura. <b>(Opción por defecto)</b><br/>
+                            Desactivada, sólo se copiarán los datos.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-sm btn-success" aria-label="Iniciar copia" id="b_nuevo_backup_db">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        <span class="hidden-xs">&nbsp; Iniciar copia</span>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Restaurar SQL -->
+<div class="modal fade bs-example-modal-lg" id="advertenciaRestaurarSQL" tabindex="-1" role="dialog" aria-labelledby="advertenciaRestaurarSQL">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <form name="f_restaurar_backup_sql" method="POST" action="{$fsc->url()}" class="form" role="form">
                 <div class="modal-header">
                     <button type="button" class="close" onclick="document.f_restaurar_backup_sql.restore_file.value = ''" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title text-danger" id="advertenciaRestaurar"><span class="fa fa-warning"></span>&nbsp;Advertencia</h4>
+                    <h4 class="modal-title text-danger" id="advertenciaRestaurar">
+                        <span class="fa fa-warning"></span>
+                        <span>&nbsp; Advertencia</span>
+                    </h4>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="restore_file" value="">
@@ -280,14 +324,17 @@
     </div>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="advertenciaRestaurarFS" tabindex="-1" role="dialog" aria-labelledby="advertenciaRestaurarFS">
-    <div class="modal-dialog" role="document">
+<!-- Modal Restaurar FS -->
+<div class="modal fade bs-example-modal-lg" id="advertenciaRestaurarFS" tabindex="-1" role="dialog" aria-labelledby="advertenciaRestaurarFS">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <form name="f_restaurar_backup_fs" method="POST" action="{$fsc->url()}" class="form" role="form">
                 <div class="modal-header">
                     <button type="button" class="close" onclick="document.f_restaurar_backup_fs.restore_file.value = ''" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title text-danger" id="advertenciaRestaurar"><span class="fa fa-warning"></span>&nbsp;Advertencia</h4>
+                    <h4 class="modal-title text-danger" id="advertenciaRestaurar">
+                        <span class="fa fa-warning"></span>
+                        <span>&nbsp; Advertencia</span>
+                    </h4>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="restore_file" value="">
@@ -296,7 +343,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal" onclick="document.f_restaurar_backup_fs.restore_file.value = ''">Cerrar</button>
-                    <button type="submit" name="accion" value="restaurarfs" class="btn btn-danger">Restaurar</button>
+                    <a class="btn btn-sm btn-success" aria-label="Nueva copia" id="b_nuevo_backup_db">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        <span class="hidden-xs">&nbsp; Copia DB</span>
+                    </a>
                 </div>
             </form>
         </div>

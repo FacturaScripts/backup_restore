@@ -2,7 +2,9 @@
 
 /*
  * This file is part of FacturaScripts
+ * Copyright (C) 2016  Joe Nilson                  joenilson@gmail.com
  * Copyright (C) 2016  Francesc Pineda Segarra     shawe.ewahs@gmail.com
+ * Copyright (C) 2016  Rafael Salas Venero         rsalas.match@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -64,10 +66,13 @@ class PostgresqlProcess {
       if ($db->dbname) {
          $this->destino = $db->backupdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.zip';
          $this->filename = $this->tempdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.sql';
-         if($db->onlydata)
+
+         if ($db->onlydata) {
             exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --data-only --format=c -b -c -C --disable-triggers --if-exists > {$this->filename} 2>&1", $cmdout);
-         else
+         } else {
             exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --format=c -b -c -C --disable-triggers --if-exists > {$this->filename} 2>&1", $cmdout);
+         }
+
          if (empty($cmdout)) {
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
@@ -75,6 +80,7 @@ class PostgresqlProcess {
             $options = array('add_path' => '/', 'remove_all_path' => TRUE);
             $zip->addGlob($this->filename, GLOB_BRACE, $options);
             $zip->close();
+
             if (file_exists($this->filename)) {
                unlink($this->filename);
             }

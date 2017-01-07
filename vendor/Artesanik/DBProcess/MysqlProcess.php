@@ -2,7 +2,9 @@
 
 /*
  * This file is part of FacturaScripts
+ * Copyright (C) 2016  Joe Nilson                  joenilson@gmail.com
  * Copyright (C) 2016  Francesc Pineda Segarra     shawe.ewahs@gmail.com
+ * Copyright (C) 2016  Rafael Salas Venero         rsalas.match@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -63,33 +65,41 @@ class MysqlProcess {
       if ($db->dbname) {
          $this->destino = $db->backupdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.zip';
          $this->filename = $this->tempdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.sql';
+
+         // Generar access_file con el usuario y la contraseña de la db
          $access_file = $this->tempdir . DIRECTORY_SEPARATOR . 'dbaccess.cnf';
-         $fp = fopen($this->filename, "w");
-         fputs($fp, sprintf("%s\n\r", "SET AUTOCOMMIT=0;"));
-         fputs($fp, sprintf("%s\n\r", "SET FOREIGN_KEY_CHECKS=0;"));
-         fclose($fp);
          $fp = fopen($access_file, "w+");
          fputs($fp, sprintf("%s", "[client]\n"));
          fputs($fp, sprintf("user=%s", $db->user . "\n"));
          fputs($fp, sprintf("password=%s", $db->pass . "\n"));
          fclose($fp);
-         if($db->onlydata)
+
+         $fp = fopen($this->filename, "w");
+         fputs($fp, sprintf("%s\n\r", "SET AUTOCOMMIT=0;"));
+         fputs($fp, sprintf("%s\n\r", "SET FOREIGN_KEY_CHECKS=0;"));
+         fclose($fp);
+
+         if ($db->onlydata) {
             exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --no-create-info --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1", $cmdout);
-         else
+         } else {
             exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1", $cmdout);
+         }
+         
          if (empty($cmdout)) {
             $fp = fopen($this->filename, "a");
             fputs($fp, sprintf("%s\n\r", "SET FOREIGN_KEY_CHECKS=1;"));
             fputs($fp, sprintf("%s\n\r", "COMMIT;"));
             fputs($fp, sprintf("%s\n\r", "SET AUTOCOMMIT=1;"));
             fclose($fp);
+            
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
             $zip->open($this->destino, \ZipArchive::CREATE);
             $options = array('add_path' => '/', 'remove_all_path' => TRUE);
             $zip->addGlob($this->filename, GLOB_BRACE, $options);
             $zip->close();
-            unlink($this->filename);
+            
+            unlink($this->filneame);
             unlink($access_file);
          }
          return (!empty($cmdout)) ? $cmdout[0] : $this->destino;
