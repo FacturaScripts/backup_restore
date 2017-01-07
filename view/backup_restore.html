@@ -16,7 +16,7 @@
                 window.location.assign("{$fsc->url()}");
             },
             error: function () {
-                alert("Ocurrió un error no contemplado en el plugin, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+                alert("Ocurrió un error no contemplado en el plugin intentando hacer una copia de seguridad de la base de datos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
             }
         });
     }
@@ -32,7 +32,7 @@
                 window.location.assign("{$fsc->url()}");
             },
             error: function () {
-                alert("Ocurrio un error no contemplado en el plugin, por favor envie un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+                alert("Ocurrio un error no contemplado en el plugin intentando hacer una copia de seguridad de los archivos de FacturaScripts, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
             }
         });
     }
@@ -44,12 +44,8 @@
             url: '{$fsc->url()}',
             async: false,
             data: 'accion=agregardb&estructura=' + chkval,
-            success: function (datos) {
-                alert("Paso 1: " + datos.mensaje);
-                //window.location.assign("{$fsc->url()}");
-            },
             error: function () {
-                alert("Ocurrió un error no contemplado en el plugin, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+                alert("Ocurrió un error no contemplado en el plugin intentando hacer una copia de seguridad completa (paso base de datos), por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
             }
         });
         // Backup archivos
@@ -58,14 +54,20 @@
             url: '{$fsc->url()}',
             async: false,
             data: 'accion=agregarfs',
-            success: function (datos) {
-                alert("Paso 2: " + datos.mensaje);
+            success: function () {
+                alert("Copia de seguridad de la base de datos y de archivos realizada con éxito!");
                 window.location.assign("{$fsc->url()}");
             },
             error: function () {
-                alert("Ocurrio un error no contemplado en el plugin, por favor envie un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
+                alert("Ocurrio un error no contemplado en el plugin intentando hacer una copia de seguridad completa (paso archivos), por favor envie un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.");
             }
         });
+    }
+
+    function preparar_eliminar_archivo(valor) {
+        document.f_delete.delete_file.value = valor;
+        document.getElementById('delete_filename').innerHTML = valor;
+        $('#advertenciaEliminarArchivo').modal('show')
     }
 
     function c_dbStructCopy(valor) {
@@ -115,6 +117,10 @@
                 alert('¡Primero debe configurar el comando para realizar el backup!');
             }
         });
+
+        $("#b_eliminar_archivo").click(function (event) {
+            accion_eliminar_archivo();
+        });
     });
 </script>
 
@@ -123,7 +129,6 @@
         <div class="btn-group">
             <a class="btn btn-sm btn-default" href="{$fsc->url()}" title="Recargar la página">
                 <span class="glyphicon glyphicon-refresh"></span>
-                <span class="hidden-xs">&nbsp;</span>
             </a>
             <span class="btn-group">
                 <a id="b_configuracion" class="btn btn-sm btn-primary" href="#">
@@ -190,7 +195,7 @@
                                 <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
                                 <span class="hidden-xs hidden-sm">&nbsp; Descargar DB</span>
                             </a>
-                            <button type="button" class="btn btn-danger btn-sm" aria-label="Eliminar DB" title="Eliminar DB">
+                            <button type="button" onclick="preparar_eliminar_archivo('{$value->escaped_path}')" class="btn btn-danger btn-sm" title="Eliminar DB">
                                 <span class="fa fa-trash" aria-hidden="true"></span>
                                 <span class="hidden-xs hidden-sm">&nbsp; Eliminar DB</span>
                             </button>
@@ -223,7 +228,7 @@
                                 <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
                                 <span class="hidden-xs hidden-sm">&nbsp; Descargar FS</span>
                             </a>
-                            <button type="button" class="btn btn-danger btn-sm" aria-label="Eliminar FS" title="Eliminar FS">
+                            <button type="button" onclick="preparar_eliminar_archivo('{$value->escaped_path}')" class="btn btn-danger btn-sm" title="Eliminar FS">
                                 <span class="fa fa-trash" aria-hidden="true"></span>
                                 <span class="hidden-xs hidden-sm">&nbsp; Eliminar FS</span>
                             </button>
@@ -460,7 +465,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="restore_file" value="">
-                    Está seguro que quiere utilizar este backup de base de datos de FacturaScripts para restaurar?<br />
+                    Está seguro que quiere utilizar este backup de base de datos de FacturaScripts para restaurar?<br /><br />
                     Haciendo esto se eliminará cualquier información que se haya generado después de que se creó este backup de base de datos.
                 </div>
                 <div class="modal-footer">
@@ -486,7 +491,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="restore_file" value="">
-                    Está seguro que quiere utilizar este backup de archivos de FacturaScripts para restaurar?<br />
+                    Está seguro que quiere utilizar este backup de archivos de FacturaScripts para restaurar?<br /><br />
                     Haciendo esto se eliminará cualquier información que se haya generado después de que se creó este backup de archivos.
                 </div>
                 <div class="modal-footer">
@@ -495,6 +500,35 @@
                         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                         <span class="hidden-xs">&nbsp; Copia DB</span>
                     </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Archivo -->
+<div class="modal fade bs-example-modal-lg" id="advertenciaEliminarArchivo" tabindex="-1" role="dialog" aria-labelledby="advertenciaEliminarArchivo">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form name="f_delete" method="POST" action="{$fsc->url()}" class="form" role="form">
+                <div class="modal-header">
+                    <button type="button" class="close" onclick="document.f_delete.delete_file.value = ''" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title text-danger" id="advertenciaEliminar">
+                        <span class="fa fa-warning"></span>
+                        <span>&nbsp; Advertencia</span>
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="delete_file" id="delete_file" value="">
+                    Está seguro que quiere eliminar el archivo <span class="text-info" id="delete_filename"></span>?<br /><br />
+                    No será posible recuperar el archivo después de su eliminación.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" onclick="document.f_delete.delete_file.value = ''">Cerrar</button>
+                    <button type="submit" name="accion" value="eliminar" class="btn btn-danger">
+                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                        <span class="hidden-xs">&nbsp; Eliminar</span>
+                    </button>
                 </div>
             </form>
         </div>

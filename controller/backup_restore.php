@@ -168,6 +168,22 @@ class backup_restore extends fs_controller {
                   $this->new_error_msg('¡No se indicó un backup de archivos para realizar la restauración!');
                }
                break;
+            case "eliminar":
+               $archivo = realpath(\filter_input(INPUT_POST, 'delete_file'));
+               if (file_exists($archivo)) {
+                  if (is_dir($archivo)) {
+                     $this->new_error_msg('No se puede eliminar ' . $archivo . ' porque es un directorio!');
+                  } else {
+                     if (unlink($archivo)) {
+                        $this->new_message('Archivo ' . $archivo . ' eliminado con exito!');
+                     } else {
+                        $this->new_error_msg('Ocurrió un error al intentar eliminar el archivo ' . $archivo);
+                     }
+                  }
+               } else {
+                  $this->new_error_msg('El archivo ' . $archivo . ' no existe!');
+               }
+               break;
             default:
                break;
          }
