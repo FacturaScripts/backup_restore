@@ -190,7 +190,7 @@ class MysqlProcess {
       return $string;
    }
 
-   public function restoreSystemBackup($db, $fileBackup) {
+   public function restoreSystemBackup($db, $fileBackup, $informacion) {
       $file_info = $this->fileInfo($fileBackup);
       $tmp_file = '';
       $cmdout = null;
