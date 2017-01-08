@@ -20,10 +20,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace Artesanik;
+namespace FacturaScripts;
 
-use Artesanik\DBProcess\MysqlProcess;
-use Artesanik\DBProcess\PostgresqlProcess;
+use FacturaScripts\DBProcess\MysqlProcess;
+use FacturaScripts\DBProcess\PostgresqlProcess;
 
 /**
  * Description of DatabaseManager
@@ -46,6 +46,9 @@ class DatabaseManager {
    public $hour;
    public $min;
    public $onlydata;
+   public $nodata;
+   public $createdb;
+   public $config_file;
 
    public function __construct(array $info) {
       $this->dbms = $info['dbms'];
@@ -56,7 +59,10 @@ class DatabaseManager {
       $this->dbname = $info['dbname'];
       $this->command = $info['command'];
       $this->backupdir = $info['backupdir'];
-      $this->onlydata = $info['onlydata'];
+      $this->onlydata = false;
+      $this->nodata = false;
+      $this->createdb = false;
+
       $today = getdate();
 
       $this->day = $today['mday'];
@@ -71,9 +77,16 @@ class DatabaseManager {
       $this->hour = $today['hours'];
       $this->min = $today['minutes'];
       $this->sec = "00";
+
+      $this->config_file['configuracion']['dbms'] = $this->dbms;
+      $this->config_file['configuracion']['type'] = ($this->onlydata)?"data":"full";
+      $this->config_file['configuracion']['date_backup'] = $this->year.'-'.$this->month.'-'.$this->day;
    }
 
    public function createBackup($tipo = false) {
+      $this->config_file['configuracion']['create_database'] = ($this->createdb)?true:false;
+      $this->config_file['configuracion']['only_data'] = ($this->onlydata)?true:false;
+      $this->config_file['configuracion']['no_data'] = ($this->nodata)?true:false;
       switch ($this->dbms) {
          case "MYSQL":
             $dbHandler = new MysqlProcess;
@@ -104,7 +117,7 @@ class DatabaseManager {
    }
 
    public function removeFileBackup() {
-      
+
    }
 
 }

@@ -20,9 +20,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once 'plugins/backup_restore/vendor/Artesanik/DatabaseManager.php';
+require_once 'plugins/backup_restore/vendor/FacturaScripts/DatabaseManager.php';
 
-use Artesanik\DatabaseManager;
+use FacturaScripts\DatabaseManager;
 
 class backup_restore extends fs_controller {
 
@@ -34,9 +34,11 @@ class backup_restore extends fs_controller {
    public $fsvar;
    public $basepath;
    public $path;
-   public $backup_file_now;
+   public $backupdb_file_now;
+   public $backupfs_file_now;
    public $backup_comando;
    public $restore_comando;
+   public $restore_comando_data;
    public $backup_setup;
    public $db_version;
 
@@ -68,25 +70,21 @@ class backup_restore extends fs_controller {
 
       $this->backup_comando = $this->backup_setup['backup_comando'];
       $this->restore_comando = $this->backup_setup['restore_comando'];
+      $this->restore_comando_data = $this->backup_setup['restore_comando_data'];
 
       $this->basepath = dirname(dirname(dirname(__DIR__)));
       $this->path = self::backups_path;
 
       // Interfaz para cargar
       $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
-      require_once 'plugins/backup_restore/vendor/Artesanik/DBProcess/' . $dbInterface . 'Process.php';
+      require_once 'plugins/backup_restore/vendor/FacturaScripts/DBProcess/' . $dbInterface . 'Process.php';
 
       //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
-      $this->backup_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_NAME . "_" . \date("Ymd") . ".zip");
+      $this->backupdb_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_TYPE.'_'.FS_DB_NAME. "_" . \date("Ymd") . ".zip");
+      $this->backupfs_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . "FS_" . \date("Ymd") . ".zip");
 
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
-         if (filter_input(INPUT_POST, 'estructura') == "true") {
-            $db_solodatos = false;
-         } else {
-            $db_solodatos = true;
-         }
-
          $manager = new DatabaseManager([
              'dbms' => FS_DB_TYPE,
              'host' => FS_DB_HOST,
@@ -94,13 +92,19 @@ class backup_restore extends fs_controller {
              'user' => FS_DB_USER,
              'pass' => FS_DB_PASS,
              'dbname' => FS_DB_NAME,
-             'onlydata' => $db_solodatos,
-             'command' => ($accion == 'agregardb') ? $this->backup_comando : $this->restore_comando,
+             'command' => ($accion == 'backupdb') ? $this->backup_comando : $this->restore_comando,
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::backups_path . DIRECTORY_SEPARATOR . self::sql_path
          ]);
          switch ($accion) {
-            case "agregardb":
+            case "backupdb":
                $this->template = false;
+               $crear_db = filter_input(INPUT_POST, 'crear_db');
+               $estructura = filter_input(INPUT_POST, 'estructura');
+               $solo_datos = filter_input(INPUT_POST, 'solo_datos');
+               //Colocamos en el DatabaseManager las variables específicas para hacer el backup
+               $manager->createdb = ($crear_db)?true:false;
+               $manager->onlydata = ($estructura)?false:true;
+               $manager->nodata = ($solo_datos)?false:true;
                try {
                   $backup = $manager->createBackup('full');
                   if (file_exists($backup)) {
@@ -130,7 +134,7 @@ class backup_restore extends fs_controller {
             case "configuracion":
                $this->configurar();
                break;
-            case "agregarfs":
+            case "backupfs":
                $this->file = self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . 'FS_' . date("Ymd") . '.zip';
                $this->destino = $this->basepath . DIRECTORY_SEPARATOR . $this->file;
                $zip = new \ZipArchive();
@@ -199,25 +203,31 @@ class backup_restore extends fs_controller {
               array(
           'backup_comando' => '',
           'restore_comando' => '',
+          'restore_comando_data' => '',
               ), TRUE
       );
 
       $nombre = filter_input(INPUT_POST, 'backup_comando');
-      $cmd = $this->buscarCmd($nombre, true);
+      $cmd = $this->buscarCmd($nombre, true, false);
       $comando_backup = ($cmd) ? trim($cmd) : $this->backup_setup['backup_comando'];
 
       $nombre = filter_input(INPUT_POST, 'restore_comando');
-      $cmd = $this->buscarCmd($nombre, false);
+      $cmd = $this->buscarCmd($nombre, false, false);
       $comando_restore = ($cmd) ? trim($cmd) : $this->backup_setup['restore_comando'];
+
+      $nombre = filter_input(INPUT_POST, 'restore_comando_data');
+      $cmd = $this->buscarCmd($nombre, false, true);
+      $comando_restore_data = ($cmd) ? trim($cmd) : $this->backup_setup['restore_comando_data'];
 
       $backup_config = array(
           'backup_comando' => $comando_backup,
-          'restore_comando' => $comando_restore
+          'restore_comando' => $comando_restore,
+          'restore_comando_data' => $comando_restore_data
       );
       $this->fsvar->array_save($backup_config);
    }
 
-   private function buscarCmd($comando, $backup = TRUE) {
+   private function buscarCmd($comando, $backup = TRUE, $onlydata = FALSE) {
       if (isset($comando)) {
          $resultado = array();
          exec("$comando --version", $resultado);
@@ -227,7 +237,7 @@ class backup_restore extends fs_controller {
             return false;
          }
       } else {
-         $paths = $this->osPath($backup);
+         $paths = $this->osPath($backup, $onlydata);
 
          foreach ($paths as $cmd) {
             $lanza_comando = '"' . "$cmd" . '"' . " --version";
@@ -239,17 +249,21 @@ class backup_restore extends fs_controller {
       }
    }
 
-   private function osPath($backup = TRUE) {
+   private function osPath($backup = TRUE, $onlydata = FALSE) {
       $paths = array();
       $db_version = explode(" ", $this->db->version());
       $version[0] = substr($db_version[1], 0, 1);
       $version[1] = intval(substr($db_version[1], 1, 2));
       if (PHP_OS == "WINNT") {
-         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump.exe', 'pg_restore') : array('mysqldump.exe', 'mysql.exe');
+         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump.exe', 'pg_restore.exe', 'pg_restore.exe') : array('mysqldump.exe', 'mysql.exe', 'mysqlimport.exe');
          if ($backup == TRUE) {
             $comando = $comando[0];
          } else {
-            $comando = $comando[1];
+            if($onlydata){
+               $comando = $comando[2];
+            } else {
+               $comando = $comando[1];
+            }
          }
          $base_dir = str_replace(" (x86)", "", getenv("PROGRAMFILES")) . "\\";
          $base_dirx86 = getenv("PROGRAMFILES") . "\\";
@@ -258,11 +272,15 @@ class backup_restore extends fs_controller {
          $paths[] = $base_dir . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])) . " Server " . $version[0] . "." . $version[1] . "\\exe\\" . $comando;
          $paths[] = $base_dirx86 . ucfirst(strtolower($db_version[0])) . "\\" . ucfirst(strtolower($db_version[0])) . " Server " . $version[0] . "." . $version[1] . "\\exe\\" . $comando;
       } else {
-         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump', 'pg_restore') : array('mysqldump', 'mysql');
+         $comando = (FS_DB_TYPE == 'POSTGRESQL') ? array('pg_dump', 'pg_restore', 'pg_restore') : array('mysqldump', 'mysql', 'mysqlimport');
          if ($backup == TRUE) {
             $comando = $comando[0];
          } else {
-            $comando = $comando[1];
+            if($onlydata){
+               $comando = $comando[2];
+            } else {
+               $comando = $comando[1];
+            }
          }
          $paths[] = "/usr/bin/" . $comando;
       }
@@ -275,6 +293,8 @@ class backup_restore extends fs_controller {
          if ($file->isDot()) {
             continue;
          } elseif ($file->isFile()) {
+            //verificamos si el archivo ez un zip y si tiene un config.json
+            $informacion = $this->getConfigFromFile($dir,$file);
             $archivo = new stdClass();
             $archivo->filename = $file->getFilename();
             $archivo->path = $file->getPathName();
@@ -284,6 +304,7 @@ class backup_restore extends fs_controller {
             $archivo->date = date('Y-m-d', filemtime($file->getPathName()));
             $archivo->type = $file->getExtension();
             $archivo->file = TRUE;
+            $archivo->conf = $informacion;
             $results[] = $archivo;
          } elseif ($file->isDir()) {
             $this->getFiles($dir . DIRECTORY_SEPARATOR . $file);
@@ -304,12 +325,33 @@ class backup_restore extends fs_controller {
       return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $sz[$factor];
    }
 
+   private function getConfigFromFile($dir, $file){
+      if($file->getExtension()=='zip'){
+         $z = new ZipArchive();
+         if ($z->open($dir.'/'.$file->getFilename())) {
+            $contents = '';
+            $fp = $z->getStream('config.json');
+            if($fp){
+               while (!feof($fp)) {
+                  $contents .= fread($fp, 2);
+               }
+               fclose($fp);
+               return json_decode($contents);
+            }
+         }else{
+            return false;
+         }
+      }else{
+         return false;
+      }
+   }
+
    private static function folderToZip($folder, &$zipFile, $exclusiveLength) {
       $handle = opendir($folder);
       while (false !== $f = readdir($handle)) {
          if ($f != '.' && $f != '..') {
             $filePath = "$folder/$f";
-            // Remove prefix from file path before add to zip. 
+            // Remove prefix from file path before add to zip.
             $localPath = substr($filePath, $exclusiveLength);
             if (is_file($filePath)) {
                $zipFile->addFile($filePath, $localPath);
@@ -318,7 +360,7 @@ class backup_restore extends fs_controller {
                   // Contiene self::fs_files_path
                   // No queremos backup de backups, pero si queremos backups de sql
                } else {
-                  // Add sub-directory. 
+                  // Add sub-directory.
                   $zipFile->addEmptyDir($localPath);
                   self::folderToZip($filePath, $zipFile, $exclusiveLength);
                }

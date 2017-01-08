@@ -20,14 +20,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace Artesanik\DBProcess;
+namespace FacturaScripts\DBProcess;
 
 /**
- * Description of MysqlProcess
+ * Description of PostgresqlProcess
  *
  * @author Joe Nilson <joenilson at gmail.com>
  */
-class MysqlProcess {
+class PostgresqlProcess {
 
    public $tablas;
    public $destino;
@@ -47,62 +47,61 @@ class MysqlProcess {
       $this->destino = NULL;
       $this->origen = NULL;
       $this->conn = null;
-      $this->uery = null;
+      $this->query = null;
    }
 
    /**
-    * Conectamos utilizando PDO para obtener las carácteristicas de
+    * Conectamos utilizando PDO para obtener las características de
     * mover información a archivos
     * @param type $db
-    * @return \Artesanik\DBProcess\PDO
+    * @return \FacturaScripts\DBProcess\PDO
     */
    private function connectDB($db) {
-      $conn = new PDO('mysql:host=' . $db->host . ';port=' . $db->port . ';dbname=' . $db->dbname, $db->user, $db->pass, array(PDO::ATTR_PERSISTENT => false, PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
+      $conn = new \PDO("pgsql:host=$db->host;port=$db->port;dbname=$db->dbname;user=$db->user;password=$db->pass");
       return $conn;
    }
 
    public function createSystemBackup($db) {
+      $cmdout = array();
       if ($db->dbname) {
          $this->destino = $db->backupdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.zip';
          $this->filename = $this->tempdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.sql';
-
-         // Generar access_file con el usuario y la contraseña de la db
-         $access_file = $this->tempdir . DIRECTORY_SEPARATOR . 'dbaccess.cnf';
-         $fp = fopen($access_file, "w+");
-         fputs($fp, sprintf("%s", "[client]\n"));
-         fputs($fp, sprintf("user=%s", $db->user . "\n"));
-         fputs($fp, sprintf("password=%s", $db->pass . "\n"));
-         fclose($fp);
-
-         $fp = fopen($this->filename, "w");
-         fputs($fp, sprintf("%s\n\r", "SET AUTOCOMMIT=0;"));
-         fputs($fp, sprintf("%s\n\r", "SET FOREIGN_KEY_CHECKS=0;"));
-         fclose($fp);
-
+         $createdb = ($db->createdb)?" -C":"";
          if ($db->onlydata) {
-            exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --no-create-info --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1", $cmdout);
+            exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --data-only --format=c -c -b {$createdb} --disable-triggers --if-exists > {$this->filename} 2>&1", $cmdout);
          } else {
-            exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --databases {$db->dbname} --add-drop-database --add-drop-table >> {$this->filename} 2>&1", $cmdout);
+            $nodata = ($db->nodata)?" -s":"";
+            exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} {$nodata} --format=c -b -c {$createdb} --disable-triggers --if-exists > {$this->filename} 2>&1", $cmdout);
          }
-         
+
          if (empty($cmdout)) {
-            $fp = fopen($this->filename, "a");
-            fputs($fp, sprintf("%s\n\r", "SET FOREIGN_KEY_CHECKS=1;"));
-            fputs($fp, sprintf("%s\n\r", "COMMIT;"));
-            fputs($fp, sprintf("%s\n\r", "SET AUTOCOMMIT=1;"));
-            fclose($fp);
-            
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
             $zip->open($this->destino, \ZipArchive::CREATE);
             $options = array('add_path' => '/', 'remove_all_path' => TRUE);
             $zip->addGlob($this->filename, GLOB_BRACE, $options);
+            $zip->addFromString('config.json', \json_encode($db->config_file));
             $zip->close();
-            
-            unlink($this->filename);
-            unlink($access_file);
+
+            if (file_exists($this->filename)) {
+               unlink($this->filename);
+            }
          }
          return (!empty($cmdout)) ? $cmdout[0] : $this->destino;
+      }
+   }
+
+   public function createBackup($db, $type = 'full') {
+      if ($db->dbname) {
+         $this->conn = $this->connectDB($db);
+         $this->destino = $db->backupdir . DIRECTORY_SEPARATOR . $db->dbname . '_' . $db->year . $db->month . $db->day . '.zip';
+         $this->filename = $this->tempdir . $db->dbname . '_' . $db->year . $db->month . $db->day . '.sql';
+         if ($type == 'full') {
+            return $this->fullBackup();
+         } elseif ($type == 'tablas') {
+            $this->tablas = $db->tablas;
+            $this->tableBackup();
+         }
       }
    }
 
@@ -118,13 +117,13 @@ class MysqlProcess {
             //Creamos la estructura de la tabla
             fputs($this->file, sprintf("CREATE TABLE IF NOT EXISTS %s (\n\r", $t['table_name']), 1024);
             foreach ($this->tableColumns($t['table_name']) as $column) {
-               $listaColumnas[] = $column['Field'];
+               $listaColumnas[] = $column['column_name'];
                fputs($this->file, sprintf("%s", $this->constructColumn($column)), 1024);
             }
             fputs($this->file, sprintf(");\n\r"), 1024);
             //Copiamos la información de la tabla
             fputs($this->file, sprintf("COPY %s (%s) FROM stdin;\n\r", $t['table_name'], implode(",", $listaColumnas)), 1024);
-            $datosTabla = $this->mysqlCopyToArray($t['table_name'], "\t", "\\N", implode(",", $listaColumnas));
+            $datosTabla = $this->conn->pgsqlCopyToArray($t['table_name'], "\t", "\\N", implode(",", $listaColumnas));
             foreach ($datosTabla as $datos) {
                fputs($this->file, sprintf("%s\n\r", $datos), 1024);
             }
@@ -144,48 +143,41 @@ class MysqlProcess {
       }
    }
 
-   public function mysqlCopyToArray($table, $separator, $null, $fields) {
-      $query = $this->conn->query("SELECT ($fields) from $table");
-      $prestm = $query->fetchAll();
-      $resultados = array();
-      if ($prestm) {
-         foreach ($prestm as $item) {
-            $line = "";
-            foreach ($item as $column) {
-               $column = (!empty($column)) ? $item : (isset($null)) ? $null : $column;
-               $line .= sprintf("%s%s", $column, $separator);
-            }
-            $line .= "\n\r";
-            $resultados[] = $line;
-         }
-      }
-      return $resultados;
-   }
-
    public function tableBackup() {
-      
+
    }
 
    public function tableList() {
-      $query = $this->conn->query("SHOW TABLES");
-      $prestm = $query->fetchAll(\PDO::FETCH_COLUMN);
-      $stm = array();
-      if ($prestm) {
-         foreach ($prestm as $line) {
-            $stm['table_name'] = $line[0];
-         }
-      }
+      $query = $this->conn->query("SELECT * FROM information_schema.tables WHERE table_schema = 'public' order by table_name");
+      $stm = $query->fetchAll(\PDO::FETCH_ASSOC);
       return $stm;
    }
 
    public function tableColumns($tableName) {
-      $query = $this->conn->query("DESCRIBE $tableName");
+      $query = $this->conn->query("SELECT * FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '$tableName' ORDER BY ordinal_position;");
       $stm = $query->fetchAll(\PDO::FETCH_ASSOC);
       return $stm;
    }
 
    public function constructColumn($c) {
-      $string = sprintf("\t%s\t%s %s %s,\n\r", $c['Field'], $c['Type'], ($c['Null'] == 'YES') ? "NULL" : "NOT NULL", ($c['Default'] == 'NULL') ? '' : "DEFAULT " . $c['Default']);
+      $string = "";
+      switch ($c['data_type']) {
+         case "character varying":
+            $string = sprintf("\t%s\t%s(%s) %s %s,\n\r", $c['column_name'], $c['data_type'], $c['character_maximum_length'], ($c['is_nullable'] == 'YES') ? null : "NOT NULL", ($c['column_default'] == '') ? null : "DEFAULT " . $c['column_default']);
+            break;
+         case "double precision":
+            $string = sprintf("\t%s\t%s(%s,%s) %s %s,\n\r", $c['column_name'], $c['data_type'], $c['numeric_precision'], $c['numeric_precision_radix'], ($c['is_nullable'] == 'YES') ? null : "NOT NULL", ($c['column_default'] == '') ? null : "DEFAULT " . $c['column_default']);
+            break;
+         case "date":
+         case "time without time zone":
+         case "time with time zone":
+         case "integer":
+         case "boolean":
+         case "text":
+         default:
+            $string = sprintf("\t%s\t%s %s %s,\n\r", $c['column_name'], $c['data_type'], ($c['is_nullable'] == 'YES') ? null : "NOT NULL", ($c['column_default'] == '') ? null : "DEFAULT " . $c['column_default']);
+            break;
+      }
       return $string;
    }
 
@@ -207,18 +199,9 @@ class MysqlProcess {
          }
       }
       if (!empty($tmp_file)) {
-         //Creamos el archivo con el usuario y la clave temporalmente
-         $access_file = $this->tempdir . DIRECTORY_SEPARATOR . 'dbaccess.cnf';
-         $fp = fopen($access_file, "w+");
-         fputs($fp, sprintf("%s", "[client]\n"));
-         fputs($fp, sprintf("user=%s", $db->user . "\n"));
-         fputs($fp, sprintf("password=%s", $db->pass . "\n"));
-         fclose($fp);
-         $launchparam = "{$db->command} --defaults-extra-file={$access_file} -h {$db->host} -D {$db->dbname} < {$tmp_file} 2>&1";
-         exec($launchparam, $cmdout);
+         exec("PGPASSWORD={$db->pass} {$db->command} -U {$db->user} -h {$db->host} -p {$db->port} -d {$db->dbname} --disable-triggers --if-exists -c -Fc {$tmp_file} 2>&1", $cmdout);
          if (file_exists($tmp_file)) {
             unlink($tmp_file);
-            unlink($access_file);
          }
          return (!empty($cmdout)) ? $cmdout[0] : $cmdout;
       } else {
