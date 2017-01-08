@@ -7,43 +7,43 @@
     var msg_error_db = "Ocurrió un error no contemplado intentando hacer una copia de seguridad de la base de datos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.";
     var msg_error_fs = "Ocurrió un error no contemplado intentando hacer una copia de seguridad de los archivos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.";
 
-    function crear_backup(){
+    function crear_backup() {
         var crear_db = document.getElementById('crear_db').checked;
         var estructura = document.getElementById('estructura').checked;
         var solo_datos = document.getElementById('solo_datos').checked;
         var archivos = document.getElementById('backup_fs').checked;
         var backup_db = false;
         //Verificamos que hayan llegado valores
-        if(!crear_db && !estructura && !solo_datos && !archivos){
+        if (!crear_db && !estructura && !solo_datos && !archivos) {
             alert('¡No se seleccionó ninguna opción válida!');
-        //Si solo llegaron valores para Crear DB y Estructura pero el de datos
-        //llegó vacio, solicitamos confirmación al usuario de que esto es correcto.
-        }else if((crear_db || estructura) && !solo_datos){
+            //Si solo llegaron valores para Crear DB y Estructura pero el de datos
+            //llegó vacio, solicitamos confirmación al usuario de que esto es correcto.
+        } else if ((crear_db || estructura) && !solo_datos) {
             var backup_solo_estructura = confirm('¿Esta seguro que quiere hacer un backup sin datos?');
-            if(backup_solo_estructura){
+            if (backup_solo_estructura) {
                 //si el usuario dice que si entonces indicamos que es verdad que se va hacer un backup de DB
                 backup_db = true;
             }
-        //En cualquier otro caso indicamos que el backup de DB es true si se cumple cualquiera de los
-        //otros casos ya sea que pidieron pero siempre confirmamos el solo_datos
-        }else if((crear_db || estructura || solo_datos) && solo_datos){
+            //En cualquier otro caso indicamos que el backup de DB es true si se cumple cualquiera de los
+            //otros casos ya sea que pidieron pero siempre confirmamos el solo_datos
+        } else if ((crear_db || estructura || solo_datos) && solo_datos) {
             backup_db = true;
         }
         //Llamamos al backup de base de datos
-        if(backup_db){
+        if (backup_db) {
             if (backup_cmd !== '' && backupdb_file_now === '') {
-                crear_backup_db(crear_db,estructura,solo_datos);
+                crear_backup_db(crear_db, estructura, solo_datos);
             } else if (backup_cmd !== '' && backupdb_file_now !== '') {
                 confirmacion = confirm('¿Ya hay una Copia de Base de Datos con la fecha actual, está seguro que quiere generarla nuevamente?');
                 if (confirmacion) {
-                    crear_backup_db(crear_db,estructura,solo_datos);
+                    crear_backup_db(crear_db, estructura, solo_datos);
                 }
             } else {
                 alert('¡Primero debe configurar el comando para realizar el backup!');
             }
         }
         //Llamamos al backup de archivos
-        if(archivos){
+        if (archivos) {
             if (backupfs_file_now === '') {
                 $('#fade').show();
                 $('#tarea').html('Procesando archivos...');
@@ -62,12 +62,12 @@
         window.location.assign("{$fsc->url()}");
     }
 
-    function crear_backup_db(crear_db,estructura,datos) {
+    function crear_backup_db(crear_db, estructura, datos) {
         $.ajax({
             type: 'POST',
             url: '{$fsc->url()}',
             async: false,
-            data: 'accion=backupdb&crear_db='+crear_db+'&estructura='+estructura+'&solo_datos='+datos,
+            data: 'accion=backupdb&crear_db=' + crear_db + '&estructura=' + estructura + '&solo_datos=' + datos,
             success: function (datos) {
                 alert(datos.mensaje);
             },
@@ -116,7 +116,7 @@
         });
 
         $("#b_nuevo_backup").click(function (event) {
-            if (backup_cmd !== '' ) {
+            if (backup_cmd !== '') {
                 crear_backup();
             } else {
                 alert('¡Primero debe configurar el comando para realizar el backup!');
@@ -178,32 +178,36 @@
             <form name="f_lista_backups_sql" method="POST" action="{$fsc->url()}" class="form" role="form">
                 <tr>
                     <td class="text-left">{$value->filename}</td>
-                    <td class="text-left">Base de datos</td>
                     <td class="text-left">
+                        <span class="fa fa-database" aria-hidden="true"></span>
+                        <span class="hidden-xs hidden-sm">&nbsp; Base de datos</span>
+                    </td>
+                    <td class="text-left">
+                        <h6><span class="label label-sm label-info">Ruta:</span> <span class="label label-default">{$value->path}</span></h6>
                         {if="$value->conf"}
-                        <span class="label label-sm label-info col-sm-4">DB:</span> {$value->conf->configuracion->dbms}<br/>
-                        <span class="label label-sm label-info col-sm-4">Tipo Backup:</span> {$value->conf->configuracion->type}<br/>
-                        <span class="label label-sm label-info col-sm-4">Crear DB:</span> {if="$value->conf->configuracion->create_database"}SI{else}NO{/if}<br/>
-                        <span class="label label-sm label-info col-sm-4">Crear Estructura:</span> {if="$value->conf->configuracion->only_data"}NO{else}SI{/if}<br/>
-                        <span class="label label-sm label-info col-sm-4">Con datos:</span> {if="$value->conf->configuracion->no_data"}NO{else}SI{/if}<br/>
-                        <span class="label label-sm label-info col-sm-4">Fecha Backup:</span> {$value->conf->configuracion->date_backup}
+                        <h6><span class="label label-sm label-info">DB:</span> <span class="label label-default">{$value->conf->configuracion->dbms}</span></h6>
+                        <h6><span class="label label-sm label-info">Tipo Backup:</span> <span class="label label-default">{$value->conf->configuracion->type}</span></h6>
+                        <h6><span class="label label-sm label-info">Crear DB:</span> <span class="label label-default">{if="$value->conf->configuracion->create_database"}SI{else}NO{/if}</span></h6>
+                        <h6><span class="label label-sm label-info">Crear Estructura:</span> <span class="label label-default">{if="$value->conf->configuracion->only_data"}NO{else}SI{/if}</span></h6>
+                        <h6><span class="label label-sm label-info">Con datos:</span> <span class="label label-default">{if="$value->conf->configuracion->no_data"}NO{else}SI{/if}</span></h6>
+                        <h6><span class="label label-sm label-info">Fecha Backup:</span> <span class="label label-default">{$value->conf->configuracion->date_backup}</span></h6>
                         {/if}
                     </td>
                     <td class="text-left">{$value->size}</td>
                     <td class="text-left">{$value->date}</td>
                     <td class="text-center">
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup_sql.restore_file.value = '{$value->escaped_path}'" data-target="#advertenciaRestaurarSQL" title="Restaurar DB">
+                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup_sql.restore_file.value = '{$value->escaped_path}'" data-target="#advertenciaRestaurarSQL" title="Restaurar backup de la base de datos">
                                 <span class="fa fa-undo"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Restaurar DB</span>
+                                <span class="hidden-xs hidden-sm hidden-md">&nbsp; Restaurar</span>
                             </button>
-                            <a href="{#FS_PATH#}{$value->path}/{$value->filename}" class="btn btn-primary btn-sm" aria-label="Descargar DB" title="Descargar DB">
+                            <a href="{#FS_PATH#}{$value->path}/{$value->filename}" class="btn btn-primary btn-sm" aria-label="Descargar DB" title="Descargar backup de la base de datos">
                                 <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Descargar DB</span>
+                                <span class="hidden-xs hidden-sm hidden-md">&nbsp; Descargar</span>
                             </a>
-                            <button type="button" onclick="preparar_eliminar_archivo('{$value->escaped_path}')" class="btn btn-danger btn-sm" title="Eliminar DB">
+                            <button type="button" onclick="preparar_eliminar_archivo('{$value->escaped_path}')" class="btn btn-danger btn-sm" title="Eliminar backup de la base de datos">
                                 <span class="fa fa-trash" aria-hidden="true"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Eliminar DB</span>
+                                <span class="hidden-xs hidden-sm hidden-md">&nbsp; Eliminar</span>
                             </button>
                         </div>
                     </td>
@@ -220,23 +224,28 @@
             <form name="f_lista_backups_fs" method="POST" action="{$fsc->url()}" class="form" role="form">
                 <tr>
                     <td class="text-left">{$value->filename}</td>
-                    <td class="text-left">Archivos</td>
-                    <td class="text-left">{$value->path}</td>
+                    <td class="text-left">
+                        <span class="fa fa-files-o" aria-hidden="true"></span>
+                        <span class="hidden-xs hidden-sm">&nbsp; Archivos</span>
+                    </td>
+                    <td class="text-left">
+                        <h6><span class="label label-sm label-info">Ruta:</span> <span class="label label-default">{$value->path}</span></h6>
+                    </td>
                     <td class="text-left">{$value->size}</td>
                     <td class="text-left">{$value->date}</td>
                     <td class="text-center">
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup_fs.restore_file.value = '{$value->path}'" data-target="#advertenciaRestaurarFS" title="Restaurar FS">
+                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" onclick="document.f_restaurar_backup_fs.restore_file.value = '{$value->path}'" data-target="#advertenciaRestaurarFS" title="Restaurar backup de archivos de FacturaScripts">
                                 <span class="fa fa-undo"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Restaurar FS</span>
+                                <span class="hidden-xs hidden-sm hidden-md">&nbsp; Restaurar</span>
                             </button>
-                            <a href="{#FS_PATH#}{$value->path}/{$value->filename}" class="btn btn-primary btn-sm" aria-label="Descargar FS" title="Descargar FS">
+                            <a href="{#FS_PATH#}{$value->path}/{$value->filename}" class="btn btn-primary btn-sm" aria-label="Descargar FS" title="Descargar backup de archivos de FacturaScripts">
                                 <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Descargar FS</span>
+                                <span class="hidden-xs hidden-sm hidden-md">&nbsp; Descargar</span>
                             </a>
-                            <button type="button" onclick="preparar_eliminar_archivo('{$value->escaped_path}')" class="btn btn-danger btn-sm" title="Eliminar FS">
+                            <button type="button" onclick="preparar_eliminar_archivo('{$value->escaped_path}')" class="btn btn-danger btn-sm" title="Eliminar backup de archivos de FacturaScripts">
                                 <span class="fa fa-trash" aria-hidden="true"></span>
-                                <span class="hidden-xs hidden-sm">&nbsp; Eliminar FS</span>
+                                <span class="hidden-xs hidden-sm hidden-md">&nbsp; Eliminar</span>
                             </button>
                         </div>
                     </td>
@@ -254,73 +263,94 @@
 </div>
 
 <!-- Modal Configuración -->
-<div class="modal fade bs-example-modal-lg" id="modal_configuracion" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade bs-example-modal-md" id="modal_configuracion" role="dialog">
+    <div class="modal-dialog modal-md" role="document">
         <div class="modal-content">
             <form name="f_configuracion" action="{$fsc->url()}" method="post" class="form-horizontal" role="form">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                    <h4 class="modal-title"><span class="fa fa-gears"></span>Configuración</h4>
+                    <h4 class="modal-title">
+                        <span class="fa fa-gears"></span>
+                        <span class="hidden-xs">&nbsp; Configuración</span>
+                    </h4>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group col-sm-12">
-                        <label for="backup_comando" class="control-label">Comando para backup:</label>
-                        <input class="form-control" type="text" name="backup_comando" id="backup_comando" value="{$fsc->backup_comando}" autocomplete="off" autofocus />
-                    </div>
-                    <div class="col-sm-12">
-                        <div class="help-block text-justify">
-                            {if="$fsc->backup_comando"}
-                            <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->backup_comando}</div>
-                            {else}
-                            <span class="text-danger">No se encuentra una herramienta para realizar copia de seguridad.</span>
-                            Aquí debes configurar si no se detectó automáticamente el comando para ejecutar el backup de
-                            de la base de datos, el comando suele ser mysqldump o pg_dump, pero debes colocar su ruta completa.
-                            Por ejemplo:
-                            <ul>
-                                <li><code>/usr/src/local/mysqldump</code></li>
-                                <li><code>C:\Archivos de programa\PostgreSQL\9.3\bin\pg_dump.exe</code></li>
-                            </ul>
-                            {/if}
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-sm-12">
+                                <label for="backup_comando" class="control-label">Comando para backup:</label>
+                                <input class="form-control" type="text" name="backup_comando" id="backup_comando" value="{$fsc->backup_comando}" autocomplete="off" autofocus />
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group col-sm-12">
-                        <label for="restore_comando" class="control-label">Comando para restore:</label>
-                        <input class="form-control" type="text" name="restore_comando" id="restore_comando" value="{$fsc->restore_comando}" autocomplete="off"/>
-                    </div>
-                    <div class="col-sm-12">
-                        <div class="help-block text-justify">
-                            {if="$fsc->restore_comando"}
-                            <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->restore_comando}</div>
-                            {else}
-                            <span class="text-danger">No se encuentra una herramienta para restaurar copia de seguridad.</span>
-                            Aquí debes configurar si no se detectó automáticamente el comando para ejecutar el restore de
-                            de la base de datos, el comando suele ser mysql o pg_restore, pero debes colocar su ruta completa.
-                            Por ejemplo:
-                            <ul>
-                                <li><code>/usr/src/local/mysql</code></li>
-                                <li><code>C:\Archivos de programa\PostgreSQL\9.3\bin\pg_restore.exe</code></li>
-                            </ul>
-                            {/if}
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <div class="help-block text-justify">
+                                {if="$fsc->backup_comando"}
+                                <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->backup_comando}</div>
+                                {else}
+                                <span class="text-danger">No se encuentra una herramienta para realizar copia de seguridad.</span>
+                                Aquí debes configurar si no se detectó automáticamente el comando para ejecutar el backup de
+                                de la base de datos, el comando suele ser mysqldump o pg_dump, pero debes colocar su ruta completa.
+                                Por ejemplo:
+                                <ul>
+                                    <li><code>/usr/src/local/mysqldump</code></li>
+                                    <li><code>C:\Archivos de programa\PostgreSQL\9.3\bin\pg_dump.exe</code></li>
+                                </ul>
+                                {/if}
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group col-sm-12">
-                        <label for="restore_comando_data" class="control-label">Comando para restore solo datos:</label>
-                        <input class="form-control" type="text" name="restore_comando_data" id="restore_comando_data" value="{$fsc->restore_comando_data}" autocomplete="off"/>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-sm-12">
+                                <label for="restore_comando" class="control-label">Comando para restore:</label>
+                                <input class="form-control" type="text" name="restore_comando" id="restore_comando" value="{$fsc->restore_comando}" autocomplete="off"/>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-sm-12">
-                        <div class="help-block text-justify">
-                            {if="$fsc->restore_comando_data"}
-                            <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->restore_comando_data}</div>
-                            {else}
-                            <span class="text-danger">No se encuentra una herramienta para restaurar copia de seguridad.</span>
-                            Aquí debes configurar si no se detectó automáticamente el comando para ejecutar el restore de
-                            de la base de datos, el comando suele ser mysql o pg_restore, pero debes colocar su ruta completa.
-                            Por ejemplo:
-                            <ul>
-                                <li><code>/usr/src/local/mysqlimport</code></li>
-                                <li><code>C:\Archivos de programa\PostgreSQL\9.3\bin\pg_restore.exe</code></li>
-                            </ul>
-                            {/if}
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <div class="help-block text-justify">
+                                {if="$fsc->restore_comando"}
+                                <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->restore_comando}</div>
+                                {else}
+                                <span class="text-danger">No se encuentra una herramienta para restaurar copia de seguridad.</span>
+                                Aquí debes configurar si no se detectó automáticamente el comando para ejecutar el restore de
+                                de la base de datos, el comando suele ser mysql o pg_restore, pero debes colocar su ruta completa.
+                                Por ejemplo:
+                                <ul>
+                                    <li><code>/usr/src/local/mysql</code></li>
+                                    <li><code>C:\Archivos de programa\PostgreSQL\9.3\bin\pg_restore.exe</code></li>
+                                </ul>
+                                {/if}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-sm-12">
+                                <label for="restore_comando_data" class="control-label">Comando para restore solo datos:</label>
+                                <input class="form-control" type="text" name="restore_comando_data" id="restore_comando_data" value="{$fsc->restore_comando_data}" autocomplete="off"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <div class="help-block text-justify">
+                                {if="$fsc->restore_comando_data"}
+                                <div class="text-success text-center">Configuración correcta para {$fsc->db_version} {$fsc->restore_comando_data}</div>
+                                {else}
+                                <span class="text-danger">No se encuentra una herramienta para restaurar copia de seguridad.</span>
+                                Aquí debes configurar si no se detectó automáticamente el comando para ejecutar el restore de
+                                de la base de datos, el comando suele ser mysql o pg_restore, pero debes colocar su ruta completa.
+                                Por ejemplo:
+                                <ul>
+                                    <li><code>/usr/src/local/mysqlimport</code></li>
+                                    <li><code>C:\Archivos de programa\PostgreSQL\9.3\bin\pg_restore.exe</code></li>
+                                </ul>
+                                {/if}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -346,50 +376,82 @@
                         <span class="fa fa-info-circle"></span>
                         <span>&nbsp;Copias de Seguridad</span>
                     </h4>
-                    <p class="help-block text-justify">La Copias de Seguridad por defecto se genera con el nombre de la base de datos actual, la estructura de las tablas y los datos de la misma</p>
-                    <p class="help-block text-justify">Si necesitas modificar esto lo puedes hacer marcando o desmarcando las opciones de Base de Datos.</p>
-                    <p class="help-block text-justify">Si necesitas hacer solo una copia de seguridad de los archivos de FacturaScripts,
-                        selecciona el check de Archivos de FacturaScripts y quita los checks a las opciones de Base de Datos.</p>
-                    <p class="help-block text-justify">Puedes Seleccionar tanto Bases de Datos como Archivos de FacturaScripts para una copia de seguridad completa</p>
                 </div>
                 <div class="modal-body">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h3 class="panel-title">Opciones de Base de Datos</h3>
-                        </div>
-                        <div class="panel-body">
-                            <div class="form-group">
-                                <label class="checkbox-inline">
-                                    <input type="checkbox" id="crear_db" name="crear_db" value="TRUE" checked=""> Crear Base de Datos
-                                </label>
-                                <label class="checkbox-inline">
-                                    <input type="checkbox" id="estructura" name="estructura" value="TRUE" checked=""> Con Estructura de tablas
-                                </label>
-                                <label class="checkbox-inline">
-                                    <input type="checkbox" id="solo_datos" name="solo_datos" value="TRUE" checked=""> Solo Datos
-                                </label>
-                            </div>
-                        </div>
-                        <div class="panel-heading">
-                            <h3 class="panel-title">Opciones de Archivos de FacturaScripts</h3>
-                        </div>
-                        <div class="panel-body">
-                            <div class="form-group">
-                                <label class="checkbox-inline">
-                                    <input type="checkbox" id="backup_fs" name="backup_fs" value="TRUE"> Archivos de FacturaScripts
-                                </label>
-                            </div>
-                        </div>
-                        <div class="panel-footer">
-                            <span class="text-info">
-                                <span class="fa fa-info-circle">&nbsp;</span>
-                                <span>No es necesario cambiar ninguna opción.</span>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <span class="help-block text-muted">
+                                <p class="text-justify">La Copias de Seguridad por defecto se genera con el nombre de la base de datos actual, la estructura de las tablas y los datos de la misma</p>
+                                <p class="text-justify">Si necesitas modificar esto lo puedes hacer marcando o desmarcando las opciones de Base de Datos.</p>
+                                <p class="text-justify">Si necesitas hacer solo una copia de seguridad de los archivos de FacturaScripts,
+                                    selecciona el check de Archivos de FacturaScripts y quita los checks a las opciones de Base de Datos.</p>
+                                <p class="text-justify">Puedes Seleccionar tanto Bases de Datos como Archivos de FacturaScripts para una copia de seguridad completa</p>
                             </span>
-                            <br/>
-                            <span class="text-danger">
-                                <span class="fa fa-warning">&nbsp;</span>
-                                <span><b>Sino estas seguro a que se refieren estas opciones, solo dale click al boton de Iniciar Copia de DB.</b></span>
-                            </span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group" id="accordion" role="tablist">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab">
+                                <h4 class="panel-title">
+                                    <a href="#collapseOptions" class="" role="button" data-toggle="collapse" aria-expanded="true" aria-controls="collapseOptions">
+                                        Configuración avanzada
+                                    </a>
+                                </h4>
+                            </div>
+                            <div class="panel-collapse" role="tabpanel" aria-labelledby="collapseOptions">
+                                <ul class="list-group collapse"id="collapseOptions" >
+                                    <li class="list-group-item">
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <h5>Opciones de Base de Datos</h5>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <div class="form-group">
+                                                    <label class="checkbox-inline">
+                                                        <input type="checkbox" id="crear_db" name="crear_db" value="TRUE" checked=""> Crear Base de Datos
+                                                    </label>
+                                                    <label class="checkbox-inline">
+                                                        <input type="checkbox" id="estructura" name="estructura" value="TRUE" checked=""> Con Estructura de tablas
+                                                    </label>
+                                                    <label class="checkbox-inline">
+                                                        <input type="checkbox" id="solo_datos" name="solo_datos" value="TRUE" checked=""> Solo Datos
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <h5>Opciones de Archivos de FacturaScripts</h5>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <div class="form-group">
+                                                    <label class="checkbox-inline">
+                                                        <input type="checkbox" id="backup_fs" name="backup_fs" value="TRUE"> Archivos de FacturaScripts
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <div class="panel-footer">
+                                    <span class="text-info">
+                                        <span class="fa fa-info-circle">&nbsp;</span>
+                                        <span>No es necesario cambiar ninguna opción.</span>
+                                    </span>
+                                    <br/>
+                                    <span class="text-danger">
+                                        <span class="fa fa-warning">&nbsp;</span>
+                                        <span><b>Sino estás seguro a que se refieren estas opciones, sólo pulsa al botón de Iniciar Copia.</b></span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -318,9 +318,10 @@ class backup_restore extends fs_controller {
    }
 
    public function tamano($tamano) {
+      /* https://es.wikipedia.org/wiki/Mebibyte */
       $bytes = $tamano;
       $decimals = 2;
-      $sz = array('B', 'K', 'M', 'G', 'T', 'P');
+      $sz = array('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB');
       $factor = floor((strlen($bytes) - 1) / 3);
       return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $sz[$factor];
    }
