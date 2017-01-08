@@ -1,1 +1,4 @@
-/nbproject/
+/nbproject/*
+/nbproject/private/*
+/.idea/
+.DS_Store
