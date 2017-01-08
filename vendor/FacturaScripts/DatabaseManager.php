@@ -101,7 +101,7 @@ class DatabaseManager {
       return $resultado;
    }
 
-   public function restoreBackup($fileBackup) {
+   public function restoreBackup($fileBackup, $informacion) {
       switch ($this->dbms) {
          case "MYSQL":
             $dbHandler = new MysqlProcess;
@@ -112,7 +112,7 @@ class DatabaseManager {
          default:
             break;
       }
-      $resultado = $dbHandler->restoreSystemBackup($this, $fileBackup);
+      $resultado = $dbHandler->restoreSystemBackup($this, $fileBackup, $informacion);
       return $resultado;
    }
 

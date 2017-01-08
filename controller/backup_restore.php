@@ -122,7 +122,14 @@ class backup_restore extends fs_controller {
             case "restaurardb":
                $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
                if (file_exists($archivo)) {
-                  $backup = $manager->restoreBackup($archivo);
+                  $fichero = new SplFileInfo($archivo);
+                  $dir = $path_info[dirname];
+                  $informacion = $this->getConfigFromFile($dir,$fichero);
+                  $manager->createdb = $informacion->configuracion->{'create_database'};
+                  if(!$manager->createdb) {
+                     $manager->command = $this->restore_comando_data;
+                  }
+                  $backup = $manager->restoreBackup($archivo, $informacion->configuracion);
                   if ($backup) {
                      $this->new_error_msg('Ocurrió un error al querer restaurar el backup de base de datos: ' . $backup);
                   } else {
