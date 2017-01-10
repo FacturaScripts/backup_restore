@@ -33,6 +33,7 @@ use FacturaScripts\DBProcess\PostgresqlProcess;
 class DatabaseManager {
 
    public $dbms;
+   public $dbms_version;
    public $user;
    public $pass;
    public $host;
@@ -52,6 +53,7 @@ class DatabaseManager {
 
    public function __construct(array $info) {
       $this->dbms = $info['dbms'];
+      $this->dbms_version = $info['dbms_version'];
       $this->user = $info['user'];
       $this->pass = $info['pass'];
       $this->host = $info['host'];
@@ -79,6 +81,7 @@ class DatabaseManager {
       $this->sec = "00";
 
       $this->config_file['configuracion']['dbms'] = $this->dbms;
+      $this->config_file['configuracion']['dbms_version'] = $this->dbms_version;
       $this->config_file['configuracion']['type'] = ($this->onlydata)?"data":"full";
       $this->config_file['configuracion']['date_backup'] = $this->year.'-'.$this->month.'-'.$this->day;
    }

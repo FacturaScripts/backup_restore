@@ -1,134 +1,17 @@
 {include="header"}
-
-<script>
-    var backup_cmd = '{$fsc->backup_comando}';
-    var backupdb_file_now = '{$fsc->backupdb_file_now}';
-    var backupfs_file_now = '{$fsc->backupfs_file_now}';
-    var msg_error_db = "Ocurrió un error no contemplado intentando hacer una copia de seguridad de la base de datos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.";
-    var msg_error_fs = "Ocurrió un error no contemplado intentando hacer una copia de seguridad de los archivos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.";
-
-    function crear_backup() {
-        var crear_db = document.getElementById('crear_db').checked;
-        var estructura = document.getElementById('estructura').checked;
-        var solo_datos = document.getElementById('solo_datos').checked;
-        var archivos = document.getElementById('backup_fs').checked;
-        var backup_db = false;
-        //Verificamos que hayan llegado valores
-        if (!crear_db && !estructura && !solo_datos && !archivos) {
-            alert('¡No se seleccionó ninguna opción válida!');
-            //Si solo llegaron valores para Crear DB y Estructura pero el de datos
-            //llegó vacio, solicitamos confirmación al usuario de que esto es correcto.
-        } else if ((crear_db || estructura) && !solo_datos) {
-            var backup_solo_estructura = confirm('¿Esta seguro que quiere hacer un backup sin datos?');
-            if (backup_solo_estructura) {
-                //si el usuario dice que si entonces indicamos que es verdad que se va hacer un backup de DB
-                backup_db = true;
-            }
-            //En cualquier otro caso indicamos que el backup de DB es true si se cumple cualquiera de los
-            //otros casos ya sea que pidieron pero siempre confirmamos el solo_datos
-        } else if ((crear_db || estructura || solo_datos) && solo_datos) {
-            backup_db = true;
-        }
-        //Llamamos al backup de base de datos
-        if (backup_db) {
-            if (backup_cmd !== '' && backupdb_file_now === '') {
-                crear_backup_db(crear_db, estructura, solo_datos);
-            } else if (backup_cmd !== '' && backupdb_file_now !== '') {
-                confirmacion = confirm('¿Ya hay una Copia de Base de Datos con la fecha actual, está seguro que quiere generarla nuevamente?');
-                if (confirmacion) {
-                    crear_backup_db(crear_db, estructura, solo_datos);
-                }
-            } else {
-                alert('¡Primero debe configurar el comando para realizar el backup!');
-            }
-        }
-        //Llamamos al backup de archivos
-        if (archivos) {
-            if (backupfs_file_now === '') {
-                $('#fade').show();
-                $('#tarea').html('Procesando archivos...');
-                $('#loading-indicator').show();
-                crear_backup_fs();
-            } else {
-                confirmacion = confirm('¿Ya hay una Copia de Archivos con la fecha actual, está seguro que quiere generarla nuevamente?');
-                if (confirmacion) {
-                    $('#fade').show();
-                    $('#tarea').html('Procesando archivos...');
-                    $('#loading-indicator').show();
-                    crear_backup_fs();
-                }
-            }
-        }
-        window.location.assign("{$fsc->url()}");
-    }
-
-    function crear_backup_db(crear_db, estructura, datos) {
-        $.ajax({
-            type: 'POST',
-            url: '{$fsc->url()}',
-            async: false,
-            data: 'accion=backupdb&crear_db=' + crear_db + '&estructura=' + estructura + '&solo_datos=' + datos,
-            success: function (datos) {
-                alert(datos.mensaje);
-            },
-            error: function () {
-                alert(msg_error_db);
-            }
-        });
-    }
-
-    function crear_backup_fs() {
-        $.ajax({
-            type: 'POST',
-            url: '{$fsc->url()}',
-            async: false,
-            data: 'accion=backupfs',
-            success: function (datos) {
-                $('#fade').hide();
-                $('#loading-indicator').hide();
-                $('#tarea').html('');
-                alert(datos.mensaje);
-            },
-            error: function () {
-                $('#fade').hide();
-                $('#loading-indicator').hide();
-                $('#tarea').html('');
-                alert(msg_error_fs);
-            }
-        });
-    }
-
-    function preparar_eliminar_archivo(valor) {
-        document.f_delete.delete_file.value = valor;
-        document.getElementById('delete_filename').innerHTML = valor;
-        $('#advertenciaEliminarArchivo').modal('show');
-    }
-
-    function c_dbStructCopy(valor) {
-        chkval = valor;
-    }
-
-    $(document).ready(function () {
-        $("#b_configuracion").click(function (event) {
-            event.preventDefault();
-            $("#modal_configuracion").modal('show');
-            document.f_configuracion.backup_comando.focus();
-        });
-
-        $("#b_nuevo_backup").click(function (event) {
-            if (backup_cmd !== '') {
-                crear_backup();
-            } else {
-                alert('¡Primero debe configurar el comando para realizar el backup!');
-            }
-        });
-
-        $("#b_eliminar_archivo").click(function (event) {
-            accion_eliminar_archivo();
-        });
-    });
-</script>
-
+<style>
+.panel-heading .accordion-toggle:after {
+    /* symbol for "opening" panels */
+    font-family: 'Glyphicons Halflings';  /* essential for enabling glyphicon */
+    content: "\e114";    /* adjust as needed, taken from bootstrap.css */
+    float: right;        /* adjust as needed */
+    color: grey;         /* adjust as needed */
+}
+.panel-heading .accordion-toggle.collapsed:after {
+    /* symbol for "collapsed" panels */
+    content: "\e080";    /* adjust as needed, taken from bootstrap.css */
+}
+</style>
 <div class="container-fluid" style="margin-top: 10px;">
     <div class="col-sm-7 col-xs-6">
         <div class="btn-group">
@@ -185,7 +68,7 @@
                     <td class="text-left">
                         <h6><span class="label label-sm label-info">Ruta:</span> <span class="label label-default">{$value->path}</span></h6>
                         {if="$value->conf"}
-                        <h6><span class="label label-sm label-info">DB:</span> <span class="label label-default">{$value->conf->configuracion->dbms}</span></h6>
+                        <h6><span class="label label-sm label-info">DB:</span> <span class="label label-default">{$value->conf->configuracion->dbms} {$value->conf->configuracion->dbms_version}</span></h6>
                         <h6><span class="label label-sm label-info">Tipo Backup:</span> <span class="label label-default">{$value->conf->configuracion->type}</span></h6>
                         <h6><span class="label label-sm label-info">Crear DB:</span> <span class="label label-default">{if="$value->conf->configuracion->create_database"}SI{else}NO{/if}</span></h6>
                         <h6><span class="label label-sm label-info">Crear Estructura:</span> <span class="label label-default">{if="$value->conf->configuracion->only_data"}NO{else}SI{/if}</span></h6>
@@ -390,11 +273,11 @@
                         </div>
                     </div>
 
-                    <div class="panel-group" id="accordion" role="tablist">
+                    <div class="panel-group" id="accordion">
                         <div class="panel panel-default">
-                            <div class="panel-heading" role="tab">
+                            <div class="panel-heading">
                                 <h4 class="panel-title">
-                                    <a href="#collapseOptions" class="" role="button" data-toggle="collapse" aria-expanded="true" aria-controls="collapseOptions">
+                                    <a href="#collapseOptions" class="accordion-toggle" data-parent="#accordion" role="button" data-toggle="collapse" aria-expanded="true" aria-controls="collapseOptions">
                                         Configuración avanzada
                                     </a>
                                 </h4>
@@ -556,4 +439,132 @@
     <span id="tarea" class="text-warning"></span><br/>
     <img src="plugins/backup_restore/view/images/loading.gif"/>
 </div>
+<script>
+    var backup_cmd = '{$fsc->backup_comando}';
+    var backupdb_file_now = '{$fsc->backupdb_file_now}';
+    var backupfs_file_now = '{$fsc->backupfs_file_now}';
+    var msg_error_db = "Ocurrió un error no contemplado intentando hacer una copia de seguridad de la base de datos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.";
+    var msg_error_fs = "Ocurrió un error no contemplado intentando hacer una copia de seguridad de los archivos, por favor envíe un mensaje en el foro de soporte de FacturaScripts para verificar el problema, gracias.";
+
+    function crear_backup() {
+        var crear_db = document.getElementById('crear_db').checked;
+        var estructura = document.getElementById('estructura').checked;
+        var solo_datos = document.getElementById('solo_datos').checked;
+        var archivos = document.getElementById('backup_fs').checked;
+        var backup_db = false;
+        //Verificamos que hayan llegado valores
+        if (!crear_db && !estructura && !solo_datos && !archivos) {
+            alert('¡No se seleccionó ninguna opción válida!');
+            //Si solo llegaron valores para Crear DB y Estructura pero el de datos
+            //llegó vacio, solicitamos confirmación al usuario de que esto es correcto.
+        } else if ((crear_db || estructura) && !solo_datos) {
+            var backup_solo_estructura = confirm('¿Esta seguro que quiere hacer un backup sin datos?');
+            if (backup_solo_estructura) {
+                //si el usuario dice que si entonces indicamos que es verdad que se va hacer un backup de DB
+                backup_db = true;
+            }
+            //En cualquier otro caso indicamos que el backup de DB es true si se cumple cualquiera de los
+            //otros casos ya sea que pidieron pero siempre confirmamos el solo_datos
+        } else if ((crear_db || estructura || solo_datos) && solo_datos) {
+            backup_db = true;
+        }
+        //Llamamos al backup de base de datos
+        if (backup_db) {
+            if (backup_cmd !== '' && backupdb_file_now === '') {
+                crear_backup_db(crear_db, estructura, solo_datos);
+            } else if (backup_cmd !== '' && backupdb_file_now !== '') {
+                confirmacion = confirm('¿Ya hay una Copia de Base de Datos con la fecha actual, está seguro que quiere generarla nuevamente?');
+                if (confirmacion) {
+                    crear_backup_db(crear_db, estructura, solo_datos);
+                }
+            } else {
+                alert('¡Primero debe configurar el comando para realizar el backup!');
+            }
+        }
+        //Llamamos al backup de archivos
+        if (archivos) {
+            if (backupfs_file_now === '') {
+                $('#fade').show();
+                $('#tarea').html('Procesando archivos...');
+                $('#loading-indicator').show();
+                crear_backup_fs();
+            } else {
+                confirmacion = confirm('¿Ya hay una Copia de Archivos con la fecha actual, está seguro que quiere generarla nuevamente?');
+                if (confirmacion) {
+                    $('#fade').show();
+                    $('#tarea').html('Procesando archivos...');
+                    $('#loading-indicator').show();
+                    crear_backup_fs();
+                }
+            }
+        }
+        window.location.assign("{$fsc->url()}");
+    }
+
+    function crear_backup_db(crear_db, estructura, datos) {
+        $.ajax({
+            type: 'POST',
+            url: '{$fsc->url()}',
+            async: false,
+            data: 'accion=backupdb&crear_db=' + crear_db + '&estructura=' + estructura + '&solo_datos=' + datos,
+            success: function (datos) {
+                alert(datos.mensaje);
+            },
+            error: function () {
+                alert(msg_error_db);
+            }
+        });
+    }
+
+    function crear_backup_fs() {
+        $.ajax({
+            type: 'POST',
+            url: '{$fsc->url()}',
+            async: false,
+            data: 'accion=backupfs',
+            success: function (datos) {
+                $('#fade').hide();
+                $('#loading-indicator').hide();
+                $('#tarea').html('');
+                alert(datos.mensaje);
+            },
+            error: function () {
+                $('#fade').hide();
+                $('#loading-indicator').hide();
+                $('#tarea').html('');
+                alert(msg_error_fs);
+            }
+        });
+    }
+
+    function preparar_eliminar_archivo(valor) {
+        document.f_delete.delete_file.value = valor;
+        document.getElementById('delete_filename').innerHTML = valor;
+        $('#advertenciaEliminarArchivo').modal('show');
+    }
+
+    function c_dbStructCopy(valor) {
+        chkval = valor;
+    }
+
+    $(document).ready(function () {
+        $("#b_configuracion").click(function (event) {
+            event.preventDefault();
+            $("#modal_configuracion").modal('show');
+            document.f_configuracion.backup_comando.focus();
+        });
+
+        $("#b_nuevo_backup").click(function (event) {
+            if (backup_cmd !== '') {
+                crear_backup();
+            } else {
+                alert('¡Primero debe configurar el comando para realizar el backup!');
+            }
+        });
+
+        $("#b_eliminar_archivo").click(function (event) {
+            accion_eliminar_archivo();
+        });
+    });
+</script>
 {include="footer"}

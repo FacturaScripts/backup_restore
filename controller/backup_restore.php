@@ -87,6 +87,7 @@ class backup_restore extends fs_controller {
       if ($accion) {
          $manager = new DatabaseManager([
              'dbms' => FS_DB_TYPE,
+             'dbms_version' => $this->db->version(),
              'host' => FS_DB_HOST,
              'port' => FS_DB_PORT,
              'user' => FS_DB_USER,
