@@ -215,7 +215,11 @@ class MysqlProcess {
          fputs($fp, sprintf("user=%s", $db->user . "\n"));
          fputs($fp, sprintf("password=%s", $db->pass . "\n"));
          fclose($fp);
-         $launchparam = "{$db->command} --defaults-extra-file={$access_file} -h {$db->host} -D {$db->dbname} < {$tmp_file} 2>&1";
+         if($informacion->create_database) {
+            $launchparam = "{$db->command} --defaults-extra-file={$access_file} -h {$db->host} -D {$db->dbname} < {$tmp_file} 2>&1";
+         } else {
+            $launchparam = "{$db->command} --defaults-extra-file={$access_file} {$db->dbname} -h {$db->host} < {$tmp_file} 2>&1";
+         }
          exec($launchparam, $cmdout);
          if (file_exists($tmp_file)) {
             unlink($tmp_file);

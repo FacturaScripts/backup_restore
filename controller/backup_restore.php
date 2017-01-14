@@ -87,7 +87,6 @@ class backup_restore extends fs_controller {
       if ($accion) {
          $manager = new DatabaseManager([
              'dbms' => FS_DB_TYPE,
-             'dbms_version' => $this->db->version(),
              'host' => FS_DB_HOST,
              'port' => FS_DB_PORT,
              'user' => FS_DB_USER,
@@ -124,7 +123,7 @@ class backup_restore extends fs_controller {
                $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
                if (file_exists($archivo)) {
                   $fichero = new SplFileInfo($archivo);
-                  $dir = $path_info[dirname];
+                  $dir = $fichero->getPath();
                   $informacion = $this->getConfigFromFile($dir,$fichero);
                   $manager->createdb = $informacion->configuracion->{'create_database'};
                   if(!$manager->createdb) {
