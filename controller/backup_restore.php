@@ -296,10 +296,9 @@ class backup_restore extends fs_controller {
 
    private function getFiles($dir) {
       $results = array();
-      foreach (new DirectoryIterator($dir) as $file) {
-         if ($file->isDot()) {
-            continue;
-         } elseif ($file->isFile()) {
+      $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+      foreach ($it as $file) {
+         if ($file->isFile()) {
             //verificamos si el archivo ez un zip y si tiene un config.json
             $informacion = $this->getConfigFromFile($dir,$file);
             $archivo = new stdClass();
@@ -313,10 +312,14 @@ class backup_restore extends fs_controller {
             $archivo->file = TRUE;
             $archivo->conf = $informacion;
             $results[] = $archivo;
-         } elseif ($file->isDir()) {
-            $this->getFiles($dir . DIRECTORY_SEPARATOR . $file);
+         } else {
+             continue;
          }
       }
+      $ordenable = Array();
+      foreach($results as &$columnaorden)
+        $ordenable[] = &$columnaorden->date;
+      array_multisort($ordenable, SORT_DESC, SORT_STRING, $results);
       return $results;
    }
 
