@@ -33,15 +33,8 @@
         <div class="btn-group">
             <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#nuevoBackup">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-<<<<<<< HEAD
-            </a>
-            <a type="button" class="btn btn-success" aria-label="Importar" href="{$fsc->url()}">
-                <span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span>
-            </a>
-=======
                 <span class="hidden-xs">&nbsp; Nueva Copia</span>
             </button>
->>>>>>> joenilson
         </div>
     </div>
     <div class="col-sm-5 col-xs-6 text-right">
@@ -64,24 +57,6 @@
                     <th class="text-center" style="min-width:125px">Acciones</th>
                 </tr>
             </thead>
-<<<<<<< HEAD
-            {loop="$fsc->files"}
-            <tr>
-                <td class="text-left">{$value[$counter]}</td>
-                <!--<td class="text-left">{$fileSize[$counter]}</td>-->
-                <td class="text-left">FileSize</td>
-                <td class="text-left">Date</td>
-                <td class="text-left"></td>
-                <td class="text-left">
-                    <button type="button" class="btn btn-primary" aria-label="Descargar">
-                        <span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>
-                    </button>
-                </td>
-                <td class="text-left">
-                    <button type="button" class="btn btn-primary" aria-label="Eliminar">
-                        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
-                    </button>
-=======
             {loop="$fsc->sql_backup_files"}
             <form name="f_lista_backups_sql" method="POST" action="{$fsc->url()}" class="form" role="form">
                 <tr>
@@ -125,7 +100,6 @@
             <tr  class="bg-warning">
                 <td colspan="6">
                     No se ha encontrado ningún backup de base de datos de FacturaScripts.
->>>>>>> joenilson
                 </td>
             </tr>
             {/loop}

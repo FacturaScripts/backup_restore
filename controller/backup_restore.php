@@ -26,12 +26,6 @@ use FacturaScripts\DatabaseManager;
 
 class backup_restore extends fs_controller {
 
-<<<<<<< HEAD
-   const path = "tmp/" . FS_TMP_NAME . "sql_backups";
-
-   public $files;
-   public $fileSize;
-=======
    const backups_path = "backups";
    const sql_path = "sql";
    const fs_files_path = "archivos";
@@ -47,7 +41,6 @@ class backup_restore extends fs_controller {
    public $restore_comando_data;
    public $backup_setup;
    public $db_version;
->>>>>>> joenilson
 
    public function __construct() {
       parent::__construct(__CLASS__, 'Copias de seguridad', 'admin', FALSE, TRUE);
@@ -67,49 +60,6 @@ class backup_restore extends fs_controller {
          mkdir(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path);
       }
 
-<<<<<<< HEAD
-      if (substr(sprintf('%o', fileperms(self::path)), -4) != "0777") {
-         if (!chmod(self::path, 0777)) {
-            $this->new_error_msg('La carpeta ' . self::path . ' necesita permisos 777 y no se han podido aplicar automáticamente.');
-         }
-      }
-
-      if (FS_DB_TYPE == "MYSQL") {
-         $this->new_advice('DEBUG: Estás utilizando MySQL.');
-         $this->new_advice($this->command_exists('mysqldump')? 'DEBUG: mysqldump disponible' : 'DEBUG: mysqldump no disponible');
-      } else if (FS_DB_TYPE == "POSTGRESQL") {
-         $this->new_advice('DEBUG: Estás utilizando PostgreSQL.');
-         $this->new_advice($this->command_exists('pg_dump')? 'DEBUG: pg_dump disponible' : 'DEBUG: pg_dump no disponible');
-      }
-
-      $files = $this->getFiles(self::path);
-      //$fileSize = $this->getSize($files);
-
-      if (isset($_GET['nueva']) AND ! empty($_GET['nueva'])) {
-         $manager = require 'plugins/backup_restore/config/bootstrap.php';
-         $file = self::path . '/backup_' . date('d-m-Y_H-i-s') . '.sql';
-         $manager->makeBackup()->run('production', [
-             new Destination('local', $file)
-                 ], 'gzip');
-
-         if (file_exists($file)) {
-            $this->new_message("Copia '" . $file . "' creada correctamente.");
-         } else {
-            $this->new_error_msg("No se ha podido realizar la copia '" . $file . "'");
-         }
-
-         if (file_exists($file . '.gz')) {
-            $this->new_message("Copia '" . $file . ".gz' creada correctamente.");
-         } else {
-            $this->new_error_msg("No se ha podido realizar la copia '" . $file . ".gz'");
-         }
-      } else if (isset($_GET['restaurar']) AND ! empty($_GET['restaurar'])) {
-         if (file_exists($_GET['restaurar'])) {
-            //restore
-            //$manager->makeRestore()->run('local', 'tmp/sql_backups/backup_'.date('d-m-Y_H:i:s').'.sql.gz', 'production', 'gzip');
-         } else {
-            // El archivo no existe
-=======
       //Si no existe el backups_path/fs_files_path lo creamos
       if (!file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path)) {
          mkdir(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path);
@@ -247,18 +197,11 @@ class backup_restore extends fs_controller {
                break;
             default:
                break;
->>>>>>> joenilson
          }
       }
-   }
 
-<<<<<<< HEAD
-   public function url() {
-      return parent::url();
-=======
       $this->sql_backup_files = $this->getFiles(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path);
       $this->fs_backup_files = $this->getFiles(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path);
->>>>>>> joenilson
    }
 
    private function configurar() {
@@ -380,40 +323,8 @@ class backup_restore extends fs_controller {
       return $results;
    }
 
-   private function getSize($files) {
-      $result = array();
-      foreach ($files as $file) {
-         $bytes = filesize($file);
-         $decimals = 2;
-         $sz = array('B', 'K', 'M', 'G', 'T', 'P');
-         $factor = floor((strlen($bytes) - 1) / 3);
-         $result[] = sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $sz[$factor];
-      }
-
-      return $result;
-   }
-
-   private function command_exists($command) {
-      $whereIsCommand = (PHP_OS == 'WINNT') ? 'where' : 'which';
-
-      $process = proc_open(
-              "$whereIsCommand $command", array(
-          0 => array("pipe", "r"), //STDIN
-          1 => array("pipe", "w"), //STDOUT
-          2 => array("pipe", "w"), //STDERR
-              ), $pipes
-      );
-      if ($process !== false) {
-         $stdout = stream_get_contents($pipes[1]);
-         $stderr = stream_get_contents($pipes[2]);
-         fclose($pipes[1]);
-         fclose($pipes[2]);
-         proc_close($process);
-
-         return $stdout != '';
-      }
-
-      return false;
+   public function url() {
+      return parent::url();
    }
 
    public function tamano($tamano) {
