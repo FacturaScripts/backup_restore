@@ -5,6 +5,7 @@
  * Copyright (C) 2016  Francesc Pineda Segarra     shawe.ewahs@gmail.com
  * Copyright (C) 2016  Joe Nilson                  joenilson@gmail.com
  * Copyright (C) 2016  Rafael Salas Venero         rsalas.match@gmail.com
+ * Copyright (C) 2017  Carlos García Gómez         neorazorx@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -20,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once 'plugins/backup_restore/vendor/FacturaScripts/DatabaseManager.php';
+require_once __DIR__.'/../vendor/FacturaScripts/DatabaseManager.php';
 
 use FacturaScripts\DatabaseManager;
 
@@ -30,17 +31,19 @@ class backup_restore extends fs_controller {
    const sql_path = "sql";
    const fs_files_path = "archivos";
 
-   public $files;
-   public $fsvar;
-   public $basepath;
-   public $path;
+   public $backup_setup;
    public $backupdb_file_now;
    public $backupfs_file_now;
    public $backup_comando;
+   public $basepath;
+   public $db_version;
+   public $files;
+   public $fsvar;
+   public $fs_backup_files;
+   public $path;
    public $restore_comando;
    public $restore_comando_data;
-   public $backup_setup;
-   public $db_version;
+   public $sql_backup_files;
 
    public function __construct() {
       parent::__construct(__CLASS__, 'Copias de seguridad', 'admin', FALSE, TRUE);
@@ -85,7 +88,7 @@ class backup_restore extends fs_controller {
 
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
-         $manager = new DatabaseManager([
+         $info = array(
              'dbms' => FS_DB_TYPE,
              'host' => FS_DB_HOST,
              'port' => FS_DB_PORT,
@@ -94,7 +97,8 @@ class backup_restore extends fs_controller {
              'dbname' => FS_DB_NAME,
              'command' => ($accion == 'backupdb') ? $this->backup_comando : $this->restore_comando,
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::backups_path . DIRECTORY_SEPARATOR . self::sql_path
-         ]);
+         );
+         $manager = new DatabaseManager($info);
          switch ($accion) {
             case "backupdb":
                $this->template = false;
