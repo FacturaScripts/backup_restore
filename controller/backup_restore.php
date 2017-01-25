@@ -95,6 +95,7 @@ class backup_restore extends fs_controller {
              'user' => FS_DB_USER,
              'pass' => FS_DB_PASS,
              'dbname' => FS_DB_NAME,
+             'dbms_version' => "1",
              'command' => ($accion == 'backupdb') ? $this->backup_comando : $this->restore_comando,
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::backups_path . DIRECTORY_SEPARATOR . self::sql_path
          );
