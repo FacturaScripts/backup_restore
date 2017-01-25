@@ -77,12 +77,14 @@ class MysqlProcess {
          fputs($fp, sprintf("%s\n\r", "SET AUTOCOMMIT=0;"));
          fputs($fp, sprintf("%s\n\r", "SET FOREIGN_KEY_CHECKS=0;"));
          fclose($fp);
-         $createdb = ($db->createdb)?" --add-drop-database":" --no-create-db";
+         $createdb = ($db->createdb) ? " --add-drop-database" : " --no-create-db";
          if ($db->onlydata) {
-            exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --no-create-info --databases {$db->dbname} {$createdb} >> {$this->filename} 2>&1", $cmdout);
+            $command = "{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --no-create-info --databases {$db->dbname} {$createdb} >> {$this->filename} 2>&1";
+            exec($command, $cmdout);
          } else {
-            $nodata = ($db->nodata)?" --no-data":"";
-            exec("{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --databases {$db->dbname} {$createdb} {$nodata} --add-drop-table >> {$this->filename} 2>&1", $cmdout);
+            $nodata = ($db->nodata) ? " --no-data" : "";
+            $command = "{$db->command} --defaults-extra-file={$access_file} -h {$db->host} --databases {$db->dbname} {$createdb} {$nodata} --add-drop-table >> {$this->filename} 2>&1";
+            exec($command, $cmdout);
          }
 
          if (empty($cmdout)) {
@@ -95,13 +97,21 @@ class MysqlProcess {
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
             $zip->open($this->destino, \ZipArchive::CREATE);
-            $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+            if (PHP_OS == "WINNT") {
+               $options = array('add_path' => ' ', 'remove_all_path' => TRUE);
+            } else {
+               $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+            }
             $zip->addGlob($this->filename, GLOB_BRACE, $options);
             $zip->addFromString('config.json', \json_encode($db->config_file));
             $zip->close();
 
-            unlink($this->filename);
-            unlink($access_file);
+            if (file_exists($this->filename)) {
+               unlink($this->filename);
+            }
+            if (file_exists($access_file)) {
+               unlink($access_file);
+            }
          }
          return (!empty($cmdout)) ? $cmdout[0] : $this->destino;
       }
@@ -135,10 +145,16 @@ class MysqlProcess {
          //Comprimimos el Backup y lo mandamos a su detino
          $zip = new \ZipArchive();
          $zip->open($this->destino, \ZipArchive::CREATE);
-         $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+         if (PHP_OS == "WINNT") {
+            $options = array('add_path' => ' ', 'remove_all_path' => TRUE);
+         } else {
+            $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+         }
          $zip->addGlob($this->filename, GLOB_BRACE, $options);
          $zip->close();
-         unlink($this->filename);
+         if (file_exists($this->filename)) {
+            unlink($this->filename);
+         }
          return $this->destino;
       } else {
          return false;
@@ -164,7 +180,7 @@ class MysqlProcess {
    }
 
    public function tableBackup() {
-
+      
    }
 
    public function tableList() {
@@ -215,7 +231,7 @@ class MysqlProcess {
          fputs($fp, sprintf("user=%s", $db->user . "\n"));
          fputs($fp, sprintf("password=%s", $db->pass . "\n"));
          fclose($fp);
-         if($informacion->create_database) {
+         if ($informacion->create_database) {
             $launchparam = "{$db->command} --defaults-extra-file={$access_file} -h {$db->host} -D {$db->dbname} < {$tmp_file} 2>&1";
          } else {
             $launchparam = "{$db->command} --defaults-extra-file={$access_file} {$db->dbname} -h {$db->host} < {$tmp_file} 2>&1";
@@ -223,8 +239,11 @@ class MysqlProcess {
          exec($launchparam, $cmdout);
          if (file_exists($tmp_file)) {
             unlink($tmp_file);
+         }
+         if (file_exists($access_file)) {
             unlink($access_file);
          }
+
          return (!empty($cmdout)) ? $cmdout[0] : $cmdout;
       } else {
          return 'No se encuentra la ruta del archivo';

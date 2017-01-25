@@ -66,19 +66,25 @@ class PostgresqlProcess {
       if ($db->dbname) {
          $this->destino = $db->backupdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.zip';
          $this->filename = $this->tempdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.sql';
-         $createdb = ($db->createdb)?" -C":"";
+         $createdb = ($db->createdb) ? " -C" : "";
          if ($db->onlydata) {
-            exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --data-only --format=c -c -b {$createdb} --disable-triggers --if-exists > {$this->filename} 2>&1", $cmdout);
+            $command = "PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --data-only --format=c -c -b {$createdb} --disable-triggers --if-exists > {$this->filename} 2>&1";
+            exec($command, $cmdout);
          } else {
-            $nodata = ($db->nodata)?" -s":"";
-            exec("PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} {$nodata} --format=c -b -c {$createdb} --disable-triggers --if-exists > {$this->filename} 2>&1", $cmdout);
+            $nodata = ($db->nodata) ? " -s" : "";
+            $command = "PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} {$nodata} --format=c -b -c {$createdb} --disable-triggers --if-exists > {$this->filename} 2>&1";
+            exec($command, $cmdout);
          }
 
          if (empty($cmdout)) {
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
             $zip->open($this->destino, \ZipArchive::CREATE);
-            $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+            if (PHP_OS == "WINNT") {
+               $options = array('add_path' => ' ', 'remove_all_path' => TRUE);
+            } else {
+               $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+            }
             $zip->addGlob($this->filename, GLOB_BRACE, $options);
             $zip->addFromString('config.json', \json_encode($db->config_file));
             $zip->close();
@@ -133,7 +139,11 @@ class PostgresqlProcess {
          //Comprimimos el Backup y lo mandamos a su detino
          $zip = new \ZipArchive();
          $zip->open($this->destino, \ZipArchive::CREATE);
-         $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+         if (PHP_OS == "WINNT") {
+            $options = array('add_path' => ' ', 'remove_all_path' => TRUE);
+         } else {
+            $options = array('add_path' => '/', 'remove_all_path' => TRUE);
+         }
          $zip->addGlob($this->filename, GLOB_BRACE, $options);
          $zip->close();
          unlink($this->filename);
@@ -144,7 +154,7 @@ class PostgresqlProcess {
    }
 
    public function tableBackup() {
-
+      
    }
 
    public function tableList() {
