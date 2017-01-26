@@ -79,6 +79,9 @@ class PostgresqlProcess {
          if (empty($cmdout)) {
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
+            if (file_exists($this->destino)) {
+               unlink($this->destino);
+            }
             $zip->open($this->destino, \ZipArchive::CREATE);
             $options = array('add_path' => DIRECTORY_SEPARATOR, 'remove_all_path' => TRUE);
             $zip->addGlob($this->filename, GLOB_BRACE, $options);
@@ -134,6 +137,9 @@ class PostgresqlProcess {
          fclose($this->file);
          //Comprimimos el Backup y lo mandamos a su detino
          $zip = new \ZipArchive();
+         if (file_exists($this->destino)) {
+            unlink($this->destino);
+         }
          $zip->open($this->destino, \ZipArchive::CREATE);
          $options = array('add_path' => DIRECTORY_SEPARATOR, 'remove_all_path' => TRUE);
          $zip->addGlob($this->filename, GLOB_BRACE, $options);
