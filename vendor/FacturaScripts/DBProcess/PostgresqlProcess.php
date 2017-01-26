@@ -80,11 +80,7 @@ class PostgresqlProcess {
             //Comprimimos el Backup y lo mandamos a su detino
             $zip = new \ZipArchive();
             $zip->open($this->destino, \ZipArchive::CREATE);
-            if (PHP_OS == "WINNT") {
-               $options = array('add_path' => ' ', 'remove_all_path' => TRUE);
-            } else {
-               $options = array('add_path' => '/', 'remove_all_path' => TRUE);
-            }
+            $options = array('add_path' => DIRECTORY_SEPARATOR, 'remove_all_path' => TRUE);
             $zip->addGlob($this->filename, GLOB_BRACE, $options);
             $zip->addFromString('config.json', \json_encode($db->config_file));
             $zip->close();
@@ -139,11 +135,7 @@ class PostgresqlProcess {
          //Comprimimos el Backup y lo mandamos a su detino
          $zip = new \ZipArchive();
          $zip->open($this->destino, \ZipArchive::CREATE);
-         if (PHP_OS == "WINNT") {
-            $options = array('add_path' => ' ', 'remove_all_path' => TRUE);
-         } else {
-            $options = array('add_path' => '/', 'remove_all_path' => TRUE);
-         }
+         $options = array('add_path' => DIRECTORY_SEPARATOR, 'remove_all_path' => TRUE);
          $zip->addGlob($this->filename, GLOB_BRACE, $options);
          $zip->close();
          unlink($this->filename);
