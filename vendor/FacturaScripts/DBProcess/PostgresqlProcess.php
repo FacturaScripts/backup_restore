@@ -83,8 +83,7 @@ class PostgresqlProcess {
                unlink($this->destino);
             }
             $zip->open($this->destino, \ZipArchive::CREATE);
-            $options = array('add_path' => DIRECTORY_SEPARATOR, 'remove_all_path' => TRUE);
-            $zip->addGlob($this->filename, GLOB_BRACE, $options);
+            $zip->addFile($this->filename, basename($this->filename));
             $zip->addFromString('config.json', \json_encode($db->config_file));
             $zip->close();
 
@@ -141,8 +140,7 @@ class PostgresqlProcess {
             unlink($this->destino);
          }
          $zip->open($this->destino, \ZipArchive::CREATE);
-         $options = array('add_path' => DIRECTORY_SEPARATOR, 'remove_all_path' => TRUE);
-         $zip->addGlob($this->filename, GLOB_BRACE, $options);
+         $zip->addFile($this->filename, basename($this->filename));
          $zip->close();
          unlink($this->filename);
          return $this->destino;

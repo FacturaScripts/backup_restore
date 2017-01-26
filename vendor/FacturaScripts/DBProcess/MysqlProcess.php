@@ -100,8 +100,7 @@ class MysqlProcess {
                unlink($this->destino);
             }
             $zip->open($this->destino, \ZipArchive::CREATE);
-            $options = array('add_path' => DIRECTORY_SEPARATOR, 'remove_all_path' => TRUE);
-            $zip->addGlob($this->filename, GLOB_BRACE, $options);
+            $zip->addFile($this->filename, basename($this->filename));
             $zip->addFromString('config.json', \json_encode($db->config_file));
             $zip->close();
 
@@ -147,8 +146,7 @@ class MysqlProcess {
             unlink($this->destino);
          }
          $zip->open($this->destino, \ZipArchive::CREATE);
-         $options = array('add_path' => DIRECTORY_SEPARATOR, 'remove_all_path' => TRUE);
-         $zip->addGlob($this->filename, GLOB_BRACE, $options);
+         $zip->addFile($this->filename, basename($this->filename));
          $zip->close();
          if (file_exists($this->filename)) {
             unlink($this->filename);

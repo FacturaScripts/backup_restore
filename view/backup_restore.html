@@ -25,6 +25,10 @@
                     <span class="fa fa-gears"></span>
                     <span class="hidden-xs">&nbsp;Configuración</span>
                 </a>
+                <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#subirArchivo">
+                    <span class="glyphicon glyphicon-upload" aria-hidden="true"></span>
+                    <span class="hidden-xs">&nbsp;Subir archivo</span>
+                </button>
                 <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#nuevoBackup">
                     <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                     <span class="hidden-xs">&nbsp;Nueva Copia</span>
@@ -227,6 +231,36 @@
                 <div class="modal-footer">
                     <button class="btn btn-sm btn-primary" type="submit" name="accion" value="configuracion" onclick="this.disabled = true;this.form.submit();">
                         <span class="glyphicon glyphicon-floppy-disk"></span>&nbsp; Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Subir Archivo -->
+<div class="modal fade" id="subirArchivo" tabindex="-1" role="dialog" aria-labelledby="subirArchivoTitle">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form name="f_backup" enctype="multipart/form-data" action="{$fsc->url()}" method="post" class="form">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title text-info" id="subirArchivoTitle">
+                        <span class="glyphicon glyphicon-upload"></span>
+                        <span>&nbsp;Subir archivo</span>
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="form-group">
+                            <input name="archivo" type="file"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-default" data-dismiss="modal" onclick="document.f_restaurar_backup_sql.restore_file.value = ''">Cerrar</button>
+                    <button class="btn btn-sm btn-warning" type="submit" name="accion" value="subirarchivo">
+                        <span class="glyphicon glyphicon-upload"></span> Subir archivo
                     </button>
                 </div>
             </form>

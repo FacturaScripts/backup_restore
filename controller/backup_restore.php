@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once __DIR__.'/../vendor/FacturaScripts/DatabaseManager.php';
+require_once __DIR__ . '/../vendor/FacturaScripts/DatabaseManager.php';
 
 use FacturaScripts\DatabaseManager;
 
@@ -69,7 +69,7 @@ class backup_restore extends fs_controller {
       }
 
       //Buscamos los binarios necesarios en las rutas normales
-      $this->configurar();
+      $this->configure();
 
       $this->backup_comando = $this->backup_setup['backup_comando'];
       $this->restore_comando = $this->backup_setup['restore_comando'];
@@ -83,7 +83,7 @@ class backup_restore extends fs_controller {
       require_once 'plugins/backup_restore/vendor/FacturaScripts/DBProcess/' . $dbInterface . 'Process.php';
 
       //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
-      $this->backupdb_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_TYPE.'_'.FS_DB_NAME. "_" . \date("Ymd") . ".zip");
+      $this->backupdb_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_TYPE . '_' . FS_DB_NAME . "_" . \date("Ymd") . ".zip");
       $this->backupfs_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . "FS_" . \date("Ymd") . ".zip");
 
       $accion = filter_input(INPUT_POST, 'accion');
@@ -99,106 +99,26 @@ class backup_restore extends fs_controller {
              'command' => ($accion == 'backupdb') ? $this->backup_comando : $this->restore_comando,
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::backups_path . DIRECTORY_SEPARATOR . self::sql_path
          );
-         $manager = new DatabaseManager($info);
          switch ($accion) {
+            case "subirarchivo":
+               $this->upload_file();
+               break;
             case "backupdb":
-               $this->template = false;
-               $crear_db = filter_input(INPUT_POST, 'crear_db');
-               $estructura = filter_input(INPUT_POST, 'estructura');
-               $solo_datos = filter_input(INPUT_POST, 'solo_datos');
-               //Colocamos en el DatabaseManager las variables específicas para hacer el backup
-               $manager->createdb = ($crear_db)?true:false;
-               $manager->onlydata = ($estructura)?false:true;
-               $manager->nodata = ($solo_datos)?false:true;
-               try {
-                  $backup = $manager->createBackup('full');
-                  if (file_exists($backup)) {
-                     header('Content-Type: application/json');
-                     echo json_encode(array('success' => true, 'mensaje' => 'Backup de base de datos realizado correctamente: ' . $backup));
-                  } else {
-                     header('Content-Type: application/json');
-                     echo json_encode(array('success' => false, 'mensaje' => 'Algo salió mal realizando el backup de base de datos: ' . $backup));
-                  }
-               } catch (Exception $e) {
-                  header('Content-Type: application/json');
-                  echo json_encode(array('success' => false, 'mensaje' => 'Ocurrio un error interno al intentar crear el backup:' . $e->getMessage()));
-               }
+               $this->backup_db($info);
                break;
             case "restaurardb":
-               $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
-               if (file_exists($archivo)) {
-                  $fichero = new SplFileInfo($archivo);
-                  $dir = $fichero->getPath();
-                  $informacion = $this->getConfigFromFile($dir,$fichero);
-                  $manager->createdb = $informacion->configuracion->{'create_database'};
-                  if(!$manager->createdb) {
-                     $manager->command = $this->restore_comando_data;
-                  }
-                  $backup = $manager->restoreBackup($archivo, $informacion->configuracion);
-                  if ($backup) {
-                     $this->new_error_msg('Ocurrió un error al querer restaurar el backup de base de datos: ' . $backup);
-                  } else {
-                     $this->new_message('¡Backup de base de datos restaurado con exito!');
-                  }
-               } else {
-                  $this->new_error_msg('¡No se indicó un backup de base de datos para realizar la restauración!');
-               }
+               $this->restore_db($info);
             case "configuracion":
-               $this->configurar();
+               $this->configure();
                break;
             case "backupfs":
-               $this->file = self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . 'FS_' . date("Ymd") . '.zip';
-               $this->destino = $this->basepath . DIRECTORY_SEPARATOR . $this->file;
-               $zip = new \ZipArchive();
-
-               if ($zip->open($this->destino, \ZipArchive::CREATE) !== TRUE) {
-                  echo json_encode(array('success' => false, 'mensaje' => "No se puede escribir el archivo " . $this->destino));
-               } else {
-                  $zip->open($this->destino, \ZipArchive::CREATE);
-                  self::folderToZip($this->basepath, $zip, strlen("$this->basepath/"));
-                  $zip->close();
-
-                  $this->template = false;
-                  header('Content-Type: application/json');
-                  if (file_exists($this->destino)) {
-                     echo json_encode(array('success' => true, 'mensaje' => "Backup de archivos realizado correctamente: " . $this->file));
-                  } else {
-                     echo json_encode(array('success' => false, 'mensaje' => "Backup de archivos no realizado!"));
-                  }
-               }
+               $this->backup_fs();
                break;
             case "restaurarfs":
-               $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
-               if (file_exists($archivo)) {
-                  // Es necesario eliminar algo antes de restaurar??
-                  $zip = new ZipArchive;
-                  if ($zip->open($archivo) === TRUE) {
-                     $zip->extractTo($this->basepath);
-                     $zip->close();
-
-                     $this->new_message('¡Backup de archivos de restaurado con exito!');
-                  } else {
-                     $this->new_error_msg('Ocurrió un error al querer restaurar el backup de archivos');
-                  }
-               } else {
-                  $this->new_error_msg('¡No se indicó un backup de archivos para realizar la restauración!');
-               }
+               $this->restore_fs();
                break;
             case "eliminar":
-               $archivo = realpath(\filter_input(INPUT_POST, 'delete_file'));
-               if (file_exists($archivo)) {
-                  if (is_dir($archivo)) {
-                     $this->new_error_msg('No se puede eliminar ' . $archivo . ' porque es un directorio!');
-                  } else {
-                     if (unlink($archivo)) {
-                        $this->new_message('Archivo ' . $archivo . ' eliminado con exito!');
-                     } else {
-                        $this->new_error_msg('Ocurrió un error al intentar eliminar el archivo ' . $archivo);
-                     }
-                  }
-               } else {
-                  $this->new_error_msg('El archivo ' . $archivo . ' no existe!');
-               }
+               $this->delete_file();
                break;
             default:
                break;
@@ -209,7 +129,7 @@ class backup_restore extends fs_controller {
       $this->fs_backup_files = $this->getFiles(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path);
    }
 
-   private function configurar() {
+   private function configure() {
       //Inicializamos la configuracion
       $this->backup_setup = $this->fsvar->array_get(
               array(
@@ -219,17 +139,14 @@ class backup_restore extends fs_controller {
               ), TRUE
       );
 
-      $nombre = filter_input(INPUT_POST, 'backup_comando');
-      $cmd = $this->buscarCmd($nombre, true, false);
-      $comando_backup = ($cmd) ? trim($cmd) : $this->backup_setup['backup_comando'];
+      $cmd1 = $this->findCommand(filter_input(INPUT_POST, 'backup_comando'), true, false);
+      $comando_backup = ($cmd1) ? trim($cmd1) : $this->backup_setup['backup_comando'];
 
-      $nombre = filter_input(INPUT_POST, 'restore_comando');
-      $cmd = $this->buscarCmd($nombre, false, false);
-      $comando_restore = ($cmd) ? trim($cmd) : $this->backup_setup['restore_comando'];
+      $cmd2 = $this->findCommand(filter_input(INPUT_POST, 'restore_comando'), false, false);
+      $comando_restore = ($cmd2) ? trim($cmd2) : $this->backup_setup['restore_comando'];
 
-      $nombre = filter_input(INPUT_POST, 'restore_comando_data');
-      $cmd = $this->buscarCmd($nombre, false, true);
-      $comando_restore_data = ($cmd) ? trim($cmd) : $this->backup_setup['restore_comando_data'];
+      $cmd3 = $this->findCommand(filter_input(INPUT_POST, 'restore_comando_data'), false, true);
+      $comando_restore_data = ($cmd3) ? trim($cmd3) : $this->backup_setup['restore_comando_data'];
 
       $backup_config = array(
           'backup_comando' => $comando_backup,
@@ -239,7 +156,7 @@ class backup_restore extends fs_controller {
       $this->fsvar->array_save($backup_config);
    }
 
-   private function buscarCmd($comando, $backup = TRUE, $onlydata = FALSE) {
+   private function findCommand($comando, $backup = TRUE, $onlydata = FALSE) {
       if (isset($comando)) {
          $resultado = array();
          exec("$comando --version", $resultado);
@@ -271,11 +188,7 @@ class backup_restore extends fs_controller {
          if ($backup == TRUE) {
             $comando = $comando[0];
          } else {
-            if($onlydata){
-               $comando = $comando[2];
-            } else {
-               $comando = $comando[1];
-            }
+            $comando = ($onlydata) ? $comando = $comando[2] : $comando = $comando[1];
          }
          $base_dir = str_replace(" (x86)", "", getenv("PROGRAMFILES")) . "\\";
          $base_dirx86 = getenv("PROGRAMFILES") . "\\";
@@ -288,11 +201,7 @@ class backup_restore extends fs_controller {
          if ($backup == TRUE) {
             $comando = $comando[0];
          } else {
-            if($onlydata){
-               $comando = $comando[2];
-            } else {
-               $comando = $comando[1];
-            }
+            $comando = ($onlydata) ? $comando = $comando[2] : $comando = $comando[1];
          }
          $paths[] = "/usr/bin/" . $comando;
       }
@@ -305,7 +214,7 @@ class backup_restore extends fs_controller {
       foreach ($it as $file) {
          if ($file->isFile()) {
             //verificamos si el archivo ez un zip y si tiene un config.json
-            $informacion = $this->getConfigFromFile($dir,$file);
+            $informacion = $this->getConfigFromFile($dir, $file);
             $archivo = new stdClass();
             $archivo->filename = $file->getFilename();
             $archivo->path = $file->getPathName();
@@ -318,12 +227,13 @@ class backup_restore extends fs_controller {
             $archivo->conf = $informacion;
             $results[] = $archivo;
          } else {
-             continue;
+            continue;
          }
       }
       $ordenable = Array();
-      foreach($results as &$columnaorden)
-        $ordenable[] = &$columnaorden->date;
+      foreach ($results as &$columnaorden) {
+         $ordenable[] = &$columnaorden->date;
+      }
       array_multisort($ordenable, SORT_DESC, SORT_STRING, $results);
       return $results;
    }
@@ -341,23 +251,23 @@ class backup_restore extends fs_controller {
       return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $sz[$factor];
    }
 
-   private function getConfigFromFile($dir, $file){
-      if($file->getExtension()=='zip'){
+   private function getConfigFromFile($dir, $file) {
+      if ($file->getExtension() == 'zip') {
          $z = new ZipArchive();
-         if ($z->open($dir.'/'.$file->getFilename())) {
+         if ($z->open($dir . '/' . $file->getFilename())) {
             $contents = '';
             $fp = $z->getStream('config.json');
-            if($fp){
+            if ($fp) {
                while (!feof($fp)) {
                   $contents .= fread($fp, 2);
                }
                fclose($fp);
                return json_decode($contents);
             }
-         }else{
+         } else {
             return false;
          }
-      }else{
+      } else {
          return false;
       }
    }
@@ -384,6 +294,131 @@ class backup_restore extends fs_controller {
          }
       }
       closedir($handle);
+   }
+
+   private function upload_file() {
+      if (is_uploaded_file($_FILES['archivo']['tmp_name'])) {
+         // Revisamos si el fichero tiene el json con información
+         $fichero = new SplFileInfo($_FILES['archivo']['tmp_name']);
+         $dir = $fichero->getPath();
+         $informacion = $this->getConfigFromFile($dir, $fichero);
+         // Si tiene información es un backup de SQL, sino de datos de FS
+         if ($informacion) {
+            $destino = self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . $_FILES['archivo']['name'];
+         } else {
+            $destino = self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . $_FILES['archivo']['name'];
+         }
+
+         if (copy($_FILES['archivo']['tmp_name'], $destino)) {
+            $this->new_message('Archivo ' . $_FILES['archivo']['name'] . ' añadido correctamente.');
+         } else {
+            $this->new_error_msg('Error al mover el archivo ' . $_FILES['archivo']['name'] . '.');
+         }
+      }
+   }
+
+   private function backup_db($info) {
+      $this->template = false;
+      $crear_db = filter_input(INPUT_POST, 'crear_db');
+      $estructura = filter_input(INPUT_POST, 'estructura');
+      $solo_datos = filter_input(INPUT_POST, 'solo_datos');
+      //Colocamos en el DatabaseManager las variables específicas para hacer el backup
+      $manager = new DatabaseManager($info);
+      $manager->createdb = ($crear_db) ? true : false;
+      $manager->onlydata = ($estructura) ? false : true;
+      $manager->nodata = ($solo_datos) ? false : true;
+      try {
+         $backup = $manager->createBackup('full');
+         if (file_exists($backup)) {
+            header('Content-Type: application/json');
+            echo json_encode(array('success' => true, 'mensaje' => 'Backup de base de datos realizado correctamente: ' . $backup));
+         } else {
+            header('Content-Type: application/json');
+            echo json_encode(array('success' => false, 'mensaje' => 'Algo salió mal realizando el backup de base de datos: ' . $backup));
+         }
+      } catch (Exception $e) {
+         header('Content-Type: application/json');
+         echo json_encode(array('success' => false, 'mensaje' => 'Ocurrio un error interno al intentar crear el backup:' . $e->getMessage()));
+      }
+   }
+
+   private function restore_db($info) {
+      $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
+      if (file_exists($archivo)) {
+         $fichero = new SplFileInfo($archivo);
+         $dir = $fichero->getPath();
+         $informacion = $this->getConfigFromFile($dir, $fichero);
+         $manager = new DatabaseManager($info);
+         $manager->createdb = $informacion->configuracion->{'create_database'};
+         if (!$manager->createdb) {
+            $manager->command = $this->restore_comando_data;
+         }
+         $backup = $manager->restoreBackup($archivo, $informacion->configuracion);
+         if ($backup) {
+            $this->new_error_msg('Ocurrió un error al querer restaurar el backup de base de datos: ' . $backup);
+         } else {
+            $this->new_message('¡Backup de base de datos restaurado con exito!');
+         }
+      } else {
+         $this->new_error_msg('¡No se indicó un backup de base de datos para realizar la restauración!');
+      }
+   }
+
+   private function backup_fs() {
+      $this->file = self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . 'FS_' . date("Ymd") . '.zip';
+      $this->destino = $this->basepath . DIRECTORY_SEPARATOR . $this->file;
+      $zip = new \ZipArchive();
+
+      if ($zip->open($this->destino, \ZipArchive::CREATE) !== TRUE) {
+         echo json_encode(array('success' => false, 'mensaje' => "No se puede escribir el archivo " . $this->destino));
+      } else {
+         $zip->open($this->destino, \ZipArchive::CREATE);
+         self::folderToZip($this->basepath, $zip, strlen("$this->basepath/"));
+         $zip->close();
+
+         $this->template = false;
+         header('Content-Type: application/json');
+         if (file_exists($this->destino)) {
+            echo json_encode(array('success' => true, 'mensaje' => "Backup de archivos realizado correctamente: " . $this->file));
+         } else {
+            echo json_encode(array('success' => false, 'mensaje' => "Backup de archivos no realizado!"));
+         }
+      }
+   }
+
+   private function restore_fs() {
+      $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
+      if (file_exists($archivo)) {
+         // Es necesario eliminar algo antes de restaurar??
+         $zip = new ZipArchive;
+         if ($zip->open($archivo) === TRUE) {
+            $zip->extractTo($this->basepath);
+            $zip->close();
+
+            $this->new_message('¡Backup de archivos de restaurado con exito!');
+         } else {
+            $this->new_error_msg('Ocurrió un error al querer restaurar el backup de archivos');
+         }
+      } else {
+         $this->new_error_msg('¡No se indicó un backup de archivos para realizar la restauración!');
+      }
+   }
+
+   private function delete_file() {
+      $archivo = realpath(\filter_input(INPUT_POST, 'delete_file'));
+      if (file_exists($archivo)) {
+         if (is_dir($archivo)) {
+            $this->new_error_msg('No se puede eliminar ' . $archivo . ' porque es un directorio!');
+         } else {
+            if (unlink($archivo)) {
+               $this->new_message('Archivo ' . $archivo . ' eliminado con exito!');
+            } else {
+               $this->new_error_msg('Ocurrió un error al intentar eliminar el archivo ' . $archivo);
+            }
+         }
+      } else {
+         $this->new_error_msg('El archivo ' . $archivo . ' no existe!');
+      }
    }
 
 }
