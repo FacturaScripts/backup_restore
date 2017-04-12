@@ -62,7 +62,7 @@ class PostgresqlProcess {
 
    public function createSystemBackup($db) {
       $cmdout = array();
-      $variables_dump = ($this->db_version()>94)?"--disable-triggers --if-exists":"--disable-triggers";
+      $variables_dump = ($this->db_version($db)>94)?"--disable-triggers --if-exists":"--disable-triggers";
       if ($db->dbname) {
          $this->destino = $db->backupdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.zip';
          $this->filename = $this->tempdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.sql';
@@ -191,7 +191,7 @@ class PostgresqlProcess {
       $file_info = $this->fileInfo($fileBackup);
       $tmp_file = '';
       $cmdout = null;
-      $variables_restore = ($this->db_version()>94)?"--disable-triggers --if-exists":"--disable-triggers";
+      $variables_restore = ($this->db_version($db)>94)?"--disable-triggers --if-exists":"--disable-triggers";
       if ($file_info == 'sql') {
          $tmp_file = $this->tempdir . DIRECTORY_SEPARATOR . $fileBackup;
          copy($fileBackup, $tmp_file);
@@ -236,8 +236,8 @@ class PostgresqlProcess {
     * sobre todo con versiones inferiores a la 9.5.x o 95
     * @return type integer
     */
-   private function db_version(){
-       $version = explode(".",$this->dbms_version);
+   private function db_version($db){
+       $version = explode(".",$db->dbms_version);
        return $version[0].$version[1];
    }
 

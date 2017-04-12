@@ -578,7 +578,6 @@
         }
         //Llamamos al backup de base de datos
         if (backup_db) {
-            var seguir = false;
             if (backup_cmd !== '' && backupdb_file_now === '') {
                 $('#fade').show();
                 $('#tarea').html('Procesando backup...');
@@ -604,7 +603,6 @@
                          $('#tarea').html('Procesando backup...');
                          $('#loading-indicator').show();
                          crear_backup_db(crear_db, estructura, solo_datos, archivos);
-                         seguir = true;
                      }
                   }
                });
