@@ -37,6 +37,7 @@ class backup_restore extends fs_controller {
    public $backup_comando;
    public $basepath;
    public $db_version;
+   public $db_version_number;
    public $files;
    public $fsvar;
    public $fs_backup_files;
@@ -44,15 +45,25 @@ class backup_restore extends fs_controller {
    public $restore_comando;
    public $restore_comando_data;
    public $sql_backup_files;
-
+   public $loop_horas;
+   public $backup_cron;
+   public $backup_programado;
    public function __construct() {
       parent::__construct(__CLASS__, 'Copias de seguridad', 'admin', FALSE, TRUE);
    }
 
    protected function private_core() {
       $this->db_version = $this->db->version();
+      //Para garantizar las variables de cada perfil de db debemos de colocar esta opcion
+      if(FS_DB_TYPE == 'POSTGRESQL'){
+          $dbinfo = \pg_version();
+          $this->db_version_number = $dbinfo['server'];
+      }else{
+          $dbinfo = $this->db->select("SELECT version();");
+          $this->db_version_number = $dbinfo[0]['version()'];
+      }
       $this->fsvar = new fs_var();
-
+      $this->loop_horas = array();
       //Si no existe el backups_path lo creamos
       if (!file_exists(self::backups_path)) {
          mkdir(self::backups_path);
@@ -73,6 +84,11 @@ class backup_restore extends fs_controller {
       $this->basepath = dirname(dirname(dirname(__DIR__)));
       $this->path = self::backups_path;
 
+      //Creamos un array para el selector de horas para cron
+      for ($x = 0; $x < 25; $x++) {
+         $this->loop_horas[] = str_pad($x, 2, "0", STR_PAD_LEFT);
+      }
+      
       // Interfaz para cargar
       $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
       require_once 'plugins/backup_restore/vendor/FacturaScripts/DBProcess/' . $dbInterface . 'Process.php';
@@ -80,7 +96,8 @@ class backup_restore extends fs_controller {
       $this->backup_comando = $this->backup_setup['backup_comando'];
       $this->restore_comando = $this->backup_setup['restore_comando'];
       $this->restore_comando_data = $this->backup_setup['restore_comando_data'];      
-      
+      $this->backup_cron = $this->backup_setup['backup_cron'];
+      $this->backup_programado = $this->backup_setup['backup_programado'];
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
          $info = array(
@@ -90,7 +107,7 @@ class backup_restore extends fs_controller {
              'user' => FS_DB_USER,
              'pass' => FS_DB_PASS,
              'dbname' => FS_DB_NAME,
-             'dbms_version' => "1",
+             'dbms_version' => $this->db_version_number,
              'command' => ($accion == 'backupdb') ? $this->backup_comando : $this->restore_comando,
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::backups_path . DIRECTORY_SEPARATOR . self::sql_path
          );
@@ -115,9 +132,18 @@ class backup_restore extends fs_controller {
             case "eliminar":
                $this->delete_file();
                break;
+            case "programar_backup":
+               $this->programar_backup();
+               break;
             default:
                break;
          }
+         //Verificamos los comandos luego de cualquier actualización
+         $this->backup_comando = $this->backup_setup['backup_comando'];
+         $this->restore_comando = $this->backup_setup['restore_comando'];
+         $this->restore_comando_data = $this->backup_setup['restore_comando_data'];      
+         $this->backup_cron = $this->backup_setup['backup_cron'];
+         $this->backup_programado = $this->backup_setup['backup_programado'];
       }      
 
       //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
@@ -131,11 +157,16 @@ class backup_restore extends fs_controller {
    private function configure() {
       //Inicializamos la configuracion
       $this->backup_setup = $this->fsvar->array_get(
-              array(
-          'backup_comando' => '',
-          'restore_comando' => '',
-          'restore_comando_data' => '',
-              ), TRUE
+         array(
+            'backup_comando' => '',
+            'restore_comando' => '',
+            'restore_comando_data' => '',
+            'backup_ultimo_proceso' => '',
+            'backup_cron' => '',
+            'backup_programado' => '',
+            'backup_procesandose' => 'FALSE',
+            'backup_usuario_procesando' => ''             
+         ), TRUE
       );
 
       $cmd1 = $this->findCommand(filter_input(INPUT_POST, 'backup_comando'), true, false);
@@ -153,6 +184,23 @@ class backup_restore extends fs_controller {
           'restore_comando_data' => $comando_restore_data
       );
       $this->fsvar->array_save($backup_config);
+   }
+   
+   private function programar_backup(){
+      $op_backup_cron = \filter_input(INPUT_POST, 'backup_cron');
+      $op_backup_programado = \filter_input(INPUT_POST, 'backup_programado');
+      $backup_cron = ($op_backup_cron == 'TRUE') ? "TRUE" : "FALSE";
+      $backup_programado = $op_backup_programado;
+      $backup_config = array(
+         'backup_cron' => $backup_cron,
+         'backup_programado' => $backup_programado
+      );
+      if ($this->fsvar->array_save($backup_config)) {
+         $this->new_message('¡Backup programado correctamente!');
+      } else {
+         $this->new_error_msg('Ocurrió un error intentando guardar la información, intentelo nuevamente.');
+      }
+      $this->configure();
    }
 
    private function findCommand($comando, $backup = TRUE, $onlydata = FALSE) {
