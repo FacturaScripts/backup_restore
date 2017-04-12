@@ -70,11 +70,6 @@ class backup_restore extends fs_controller {
 
       //Buscamos los binarios necesarios en las rutas normales
       $this->configure();
-
-      $this->backup_comando = $this->backup_setup['backup_comando'];
-      $this->restore_comando = $this->backup_setup['restore_comando'];
-      $this->restore_comando_data = $this->backup_setup['restore_comando_data'];
-
       $this->basepath = dirname(dirname(dirname(__DIR__)));
       $this->path = self::backups_path;
 
@@ -82,10 +77,10 @@ class backup_restore extends fs_controller {
       $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
       require_once 'plugins/backup_restore/vendor/FacturaScripts/DBProcess/' . $dbInterface . 'Process.php';
 
-      //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
-      $this->backupdb_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_TYPE . '_' . FS_DB_NAME . "_" . \date("Ymd") . ".zip");
-      $this->backupfs_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . "FS_" . \date("Ymd") . ".zip");
-
+      $this->backup_comando = $this->backup_setup['backup_comando'];
+      $this->restore_comando = $this->backup_setup['restore_comando'];
+      $this->restore_comando_data = $this->backup_setup['restore_comando_data'];      
+      
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
          $info = array(
@@ -123,7 +118,11 @@ class backup_restore extends fs_controller {
             default:
                break;
          }
-      }
+      }      
+
+      //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
+      $this->backupdb_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_TYPE . '_' . FS_DB_NAME . "_" . \date("Ymd") . ".zip");
+      $this->backupfs_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . "FS_" . \date("Ymd") . ".zip");
 
       $this->sql_backup_files = $this->getFiles(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path);
       $this->fs_backup_files = $this->getFiles(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path);

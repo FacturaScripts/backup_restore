@@ -494,12 +494,23 @@
                message: '¡No se seleccionó ninguna opción válida!',
                title: '<b>Atención</b>'
             });
+            
             //Si solo llegaron valores para Crear DB y Estructura pero el de datos
             //llegó vacio, solicitamos confirmación al usuario de que esto es correcto.
         } else if ((crear_db || estructura) && !solo_datos) {
             bootbox.confirm({
                message: '¿Esta seguro que quiere hacer un backup sin datos?',
                title: '<b>Atención</b>',
+               buttons: {
+                  confirm: {
+                     label: 'Si',
+                     className: 'btn-success'
+                  },
+                  cancel: {
+                     label: 'No',
+                     className: 'btn-danger'
+                  }
+               },
                callback: function(result) {
                   if (result) {
                      //si el usuario dice que si entonces indicamos que es verdad que se va hacer un backup de DB
@@ -514,15 +525,33 @@
         }
         //Llamamos al backup de base de datos
         if (backup_db) {
+            var seguir = false;
             if (backup_cmd !== '' && backupdb_file_now === '') {
+                $('#fade').show();
+                $('#tarea').html('Procesando backup...');
+                $('#loading-indicator').show();
                 crear_backup_db(crear_db, estructura, solo_datos);
             } else if (backup_cmd !== '' && backupdb_file_now !== '') {
                bootbox.confirm({
                   message: '¿Ya hay una Copia de Base de Datos con la fecha actual, está seguro que quiere generarla nuevamente?',
                   title: '<b>Atención</b>',
+                  buttons: {
+                     confirm: {
+                        label: 'Si',
+                        className: 'btn-success'
+                     },
+                     cancel: {
+                        label: 'No',
+                        className: 'btn-danger'
+                     }
+                  },                  
                   callback: function(result) {
                      if (result) {
-                        window.location.href = '{$fsc->url()}&delete_autorizado='+id+'#autorizados';
+                         $('#fade').show();
+                         $('#tarea').html('Procesando backup...');
+                         $('#loading-indicator').show();
+                         crear_backup_db(crear_db, estructura, solo_datos, archivos);
+                         seguir = true;
                      }
                   }
                });
@@ -533,8 +562,8 @@
                });
             }
         }
-        //Llamamos al backup de archivos
-        if (archivos) {
+        //Llamamos al backup de archivos si no pedimos backup de db
+        if (archivos && !backup_db) {
             if (backupfs_file_now === '') {
                 $('#fade').show();
                 $('#tarea').html('Procesando archivos...');
@@ -544,6 +573,16 @@
                bootbox.confirm({
                   message: '¿Ya hay una Copia de Archivos con la fecha actual, está seguro que quiere generarla nuevamente?',
                   title: '<b>Atención</b>',
+                  buttons: {
+                     confirm: {
+                        label: 'Si',
+                        className: 'btn-success'
+                     },
+                     cancel: {
+                        label: 'No',
+                        className: 'btn-danger'
+                     }
+                  },                     
                   callback: function(result) {
                      if (result) {
                         $('#fade').show();
@@ -555,22 +594,37 @@
                });
             }
         }
-        window.location.assign("{$fsc->url()}");
     }
 
-    function crear_backup_db(crear_db, estructura, datos) {
+    function crear_backup_db(crear_db, estructura, datos, archivos) {
         $.ajax({
             type: 'POST',
             url: '{$fsc->url()}',
             async: false,
             data: 'accion=backupdb&crear_db=' + crear_db + '&estructura=' + estructura + '&solo_datos=' + datos,
             success: function (datos) {
+               $('#fade').hide();
+               $('#loading-indicator').hide();
+               $('#tarea').html('');
                bootbox.alert({
                   message: datos.mensaje,
-                  title: '<b>Atención</b>'
+                  title: '<b>Atención</b>',
+                  callback: function () {
+                     if(archivos){
+                        $('#fade').show();
+                        $('#tarea').html('Procesando archivos...');
+                        $('#loading-indicator').show();
+                        crear_backup_fs();
+                     }else{
+                         window.location.assign("{$fsc->url()}");
+                     }
+                  }
                });
             },
             error: function () {
+               $('#fade').hide();
+               $('#loading-indicator').hide();
+               $('#tarea').html('');
                bootbox.alert({
                   message: msg_error_db,
                   title: '<b>Atención</b>'
@@ -591,7 +645,10 @@
                $('#tarea').html('');
                bootbox.alert({
                   message: datos.mensaje,
-                  title: '<b>Atención</b>'
+                  title: '<b>Atención</b>',
+                  callback: function () {
+                     window.location.assign("{$fsc->url()}");
+                  }
                });
             },
             error: function () {
