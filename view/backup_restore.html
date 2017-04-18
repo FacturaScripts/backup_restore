@@ -490,23 +490,15 @@
         var backup_db = false;
         //Verificamos que hayan llegado valores
         if (!crear_db && !estructura && !solo_datos && !archivos) {
-            bootbox.alert({
-               message: '¡No se seleccionó ninguna opción válida!',
-               title: '<b>Atención</b>'
-            });
+            alert('¡No se seleccionó ninguna opción válida!');
             //Si solo llegaron valores para Crear DB y Estructura pero el de datos
             //llegó vacio, solicitamos confirmación al usuario de que esto es correcto.
         } else if ((crear_db || estructura) && !solo_datos) {
-            bootbox.confirm({
-               message: '¿Esta seguro que quiere hacer un backup sin datos?',
-               title: '<b>Atención</b>',
-               callback: function(result) {
-                  if (result) {
-                     //si el usuario dice que si entonces indicamos que es verdad que se va hacer un backup de DB
-                     backup_db = true;
-                  }
-               }
-            });
+            var backup_solo_estructura = confirm('¿Esta seguro que quiere hacer un backup sin datos?');
+            if (backup_solo_estructura) {
+                //si el usuario dice que si entonces indicamos que es verdad que se va hacer un backup de DB
+                backup_db = true;
+            }
             //En cualquier otro caso indicamos que el backup de DB es true si se cumple cualquiera de los
             //otros casos ya sea que pidieron pero siempre confirmamos el solo_datos
         } else if ((crear_db || estructura || solo_datos) && solo_datos) {
@@ -517,20 +509,12 @@
             if (backup_cmd !== '' && backupdb_file_now === '') {
                 crear_backup_db(crear_db, estructura, solo_datos);
             } else if (backup_cmd !== '' && backupdb_file_now !== '') {
-               bootbox.confirm({
-                  message: '¿Ya hay una Copia de Base de Datos con la fecha actual, está seguro que quiere generarla nuevamente?',
-                  title: '<b>Atención</b>',
-                  callback: function(result) {
-                     if (result) {
-                        window.location.href = '{$fsc->url()}&delete_autorizado='+id+'#autorizados';
-                     }
-                  }
-               });
+                confirmacion = confirm('¿Ya hay una Copia de Base de Datos con la fecha actual, está seguro que quiere generarla nuevamente?');
+                if (confirmacion) {
+                    crear_backup_db(crear_db, estructura, solo_datos);
+                }
             } else {
-               bootbox.alert({
-                  message: '¡Primero debe configurar el comando para realizar el backup!',
-                  title: '<b>Atención</b>'
-               });
+                alert('¡Primero debe configurar el comando para realizar el backup!');
             }
         }
         //Llamamos al backup de archivos
@@ -541,18 +525,13 @@
                 $('#loading-indicator').show();
                 crear_backup_fs();
             } else {
-               bootbox.confirm({
-                  message: '¿Ya hay una Copia de Archivos con la fecha actual, está seguro que quiere generarla nuevamente?',
-                  title: '<b>Atención</b>',
-                  callback: function(result) {
-                     if (result) {
-                        $('#fade').show();
-                        $('#tarea').html('Procesando archivos...');
-                        $('#loading-indicator').show();
-                        crear_backup_fs();
-                     }
-                  }
-               });
+                confirmacion = confirm('¿Ya hay una Copia de Archivos con la fecha actual, está seguro que quiere generarla nuevamente?');
+                if (confirmacion) {
+                    $('#fade').show();
+                    $('#tarea').html('Procesando archivos...');
+                    $('#loading-indicator').show();
+                    crear_backup_fs();
+                }
             }
         }
         window.location.assign("{$fsc->url()}");
@@ -565,16 +544,10 @@
             async: false,
             data: 'accion=backupdb&crear_db=' + crear_db + '&estructura=' + estructura + '&solo_datos=' + datos,
             success: function (datos) {
-               bootbox.alert({
-                  message: datos.mensaje,
-                  title: '<b>Atención</b>'
-               });
+                alert(datos.mensaje);
             },
             error: function () {
-               bootbox.alert({
-                  message: msg_error_db,
-                  title: '<b>Atención</b>'
-               });
+                alert(msg_error_db);
             }
         });
     }
@@ -586,22 +559,16 @@
             async: false,
             data: 'accion=backupfs',
             success: function (datos) {
-               $('#fade').hide();
-               $('#loading-indicator').hide();
-               $('#tarea').html('');
-               bootbox.alert({
-                  message: datos.mensaje,
-                  title: '<b>Atención</b>'
-               });
+                $('#fade').hide();
+                $('#loading-indicator').hide();
+                $('#tarea').html('');
+                alert(datos.mensaje);
             },
             error: function () {
-               $('#fade').hide();
-               $('#loading-indicator').hide();
-               $('#tarea').html('');
-               bootbox.alert({
-                  message: msg_error_fs,
-                  title: '<b>Atención</b>'
-               });
+                $('#fade').hide();
+                $('#loading-indicator').hide();
+                $('#tarea').html('');
+                alert(msg_error_fs);
             }
         });
     }
@@ -627,10 +594,7 @@
             if (backup_cmd !== '') {
                 crear_backup();
             } else {
-               bootbox.alert({
-                  message: '¡Primero debe configurar el comando para realizar el backup!',
-                  title: '<b>Atención</b>'
-               });
+                alert('¡Primero debe configurar el comando para realizar el backup!');
             }
         });
 
