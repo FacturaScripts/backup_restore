@@ -37,6 +37,7 @@ class backup_restore extends fs_controller {
    public $backup_comando;
    public $basepath;
    public $db_version;
+   public $db_version_number;
    public $files;
    public $fsvar;
    public $fs_backup_files;
@@ -44,6 +45,9 @@ class backup_restore extends fs_controller {
    public $restore_comando;
    public $restore_comando_data;
    public $sql_backup_files;
+   public $loop_horas;
+   public $backup_cron;
+   public $backup_programado;
 
    public function __construct() {
       parent::__construct(__CLASS__, 'Copias de seguridad', 'admin', FALSE, TRUE);
@@ -51,8 +55,16 @@ class backup_restore extends fs_controller {
 
    protected function private_core() {
       $this->db_version = $this->db->version();
+      //Para garantizar las variables de cada perfil de db debemos de colocar esta opcion
+      if (FS_DB_TYPE == 'POSTGRESQL') {
+         $dbinfo = \pg_version();
+         $this->db_version_number = $dbinfo['server'];
+      } else {
+         $dbinfo = $this->db->select("SELECT version();");
+         $this->db_version_number = $dbinfo[0]['version()'];
+      }
       $this->fsvar = new fs_var();
-
+      $this->loop_horas = array();
       //Si no existe el backups_path lo creamos
       if (!file_exists(self::backups_path)) {
          mkdir(self::backups_path);
@@ -70,22 +82,23 @@ class backup_restore extends fs_controller {
 
       //Buscamos los binarios necesarios en las rutas normales
       $this->configure();
-
-      $this->backup_comando = $this->backup_setup['backup_comando'];
-      $this->restore_comando = $this->backup_setup['restore_comando'];
-      $this->restore_comando_data = $this->backup_setup['restore_comando_data'];
-
       $this->basepath = dirname(dirname(dirname(__DIR__)));
       $this->path = self::backups_path;
+
+      //Creamos un array para el selector de horas para cron
+      for ($x = 0; $x < 25; $x++) {
+         $this->loop_horas[] = str_pad($x, 2, "0", STR_PAD_LEFT);
+      }
 
       // Interfaz para cargar
       $dbInterface = ucfirst(strtolower(FS_DB_TYPE));
       require_once 'plugins/backup_restore/vendor/FacturaScripts/DBProcess/' . $dbInterface . 'Process.php';
 
-      //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
-      $this->backupdb_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_TYPE . '_' . FS_DB_NAME . "_" . \date("Ymd") . ".zip");
-      $this->backupfs_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . "FS_" . \date("Ymd") . ".zip");
-
+      $this->backup_comando = $this->backup_setup['backup_comando'];
+      $this->restore_comando = $this->backup_setup['restore_comando'];
+      $this->restore_comando_data = $this->backup_setup['restore_comando_data'];
+      $this->backup_cron = $this->backup_setup['backup_cron'];
+      $this->backup_programado = $this->backup_setup['backup_programado'];
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
          $info = array(
@@ -95,7 +108,7 @@ class backup_restore extends fs_controller {
              'user' => FS_DB_USER,
              'pass' => FS_DB_PASS,
              'dbname' => FS_DB_NAME,
-             'dbms_version' => "1",
+             'dbms_version' => $this->db_version_number,
              'command' => ($accion == 'backupdb') ? $this->backup_comando : $this->restore_comando,
              'backupdir' => $this->basepath . DIRECTORY_SEPARATOR . self::backups_path . DIRECTORY_SEPARATOR . self::sql_path
          );
@@ -120,10 +133,23 @@ class backup_restore extends fs_controller {
             case "eliminar":
                $this->delete_file();
                break;
+            case "programar_backup":
+               $this->programar_backup();
+               break;
             default:
                break;
          }
+         //Verificamos los comandos luego de cualquier actualización
+         $this->backup_comando = $this->backup_setup['backup_comando'];
+         $this->restore_comando = $this->backup_setup['restore_comando'];
+         $this->restore_comando_data = $this->backup_setup['restore_comando_data'];
+         $this->backup_cron = $this->backup_setup['backup_cron'];
+         $this->backup_programado = $this->backup_setup['backup_programado'];
       }
+
+      //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
+      $this->backupdb_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . FS_DB_TYPE . '_' . FS_DB_NAME . "_" . \date("Ymd") . ".zip");
+      $this->backupfs_file_now = file_exists(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . "FS_" . \date("Ymd") . ".zip");
 
       $this->sql_backup_files = $this->getFiles(self::backups_path . DIRECTORY_SEPARATOR . self::sql_path);
       $this->fs_backup_files = $this->getFiles(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path);
@@ -136,6 +162,11 @@ class backup_restore extends fs_controller {
           'backup_comando' => '',
           'restore_comando' => '',
           'restore_comando_data' => '',
+          'backup_ultimo_proceso' => '',
+          'backup_cron' => '',
+          'backup_programado' => '',
+          'backup_procesandose' => 'FALSE',
+          'backup_usuario_procesando' => ''
               ), TRUE
       );
 
@@ -154,6 +185,23 @@ class backup_restore extends fs_controller {
           'restore_comando_data' => $comando_restore_data
       );
       $this->fsvar->array_save($backup_config);
+   }
+
+   private function programar_backup() {
+      $op_backup_cron = \filter_input(INPUT_POST, 'backup_cron');
+      $op_backup_programado = \filter_input(INPUT_POST, 'backup_programado');
+      $backup_cron = ($op_backup_cron == 'TRUE') ? "TRUE" : "FALSE";
+      $backup_programado = $op_backup_programado;
+      $backup_config = array(
+          'backup_cron' => $backup_cron,
+          'backup_programado' => $backup_programado
+      );
+      if ($this->fsvar->array_save($backup_config)) {
+         $this->new_message('¡Backup programado correctamente!');
+      } else {
+         $this->new_error_msg('Ocurrió un error intentando guardar la información, intentelo nuevamente.');
+      }
+      $this->configure();
    }
 
    private function findCommand($comando, $backup = TRUE, $onlydata = FALSE) {
@@ -213,7 +261,7 @@ class backup_restore extends fs_controller {
       $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
       foreach ($it as $file) {
          if ($file->isFile()) {
-            //verificamos si el archivo ez un zip y si tiene un config.json
+            //verificamos si el archivo es un zip y si tiene un config.json
             $informacion = $this->getConfigFromFile($dir, $file);
             $archivo = new stdClass();
             $archivo->filename = $file->getFilename();
@@ -252,9 +300,10 @@ class backup_restore extends fs_controller {
    }
 
    private function getConfigFromFile($dir, $file) {
-      if ($file->getExtension() == 'zip') {
+      $filePath = $dir . '/' . $file->getFilename();
+      if (strcmp(mime_content_type($filePath), 'application/zip') == 0) {
          $z = new ZipArchive();
-         if ($z->open($dir . '/' . $file->getFilename())) {
+         if ($z->open($filePath)) {
             $contents = '';
             $fp = $z->getStream('config.json');
             if ($fp) {
@@ -263,6 +312,8 @@ class backup_restore extends fs_controller {
                }
                fclose($fp);
                return json_decode($contents);
+            } else {
+               return false;
             }
          } else {
             return false;
@@ -301,8 +352,9 @@ class backup_restore extends fs_controller {
          // Revisamos si el fichero tiene el json con información
          $fichero = new SplFileInfo($_FILES['archivo']['tmp_name']);
          $dir = $fichero->getPath();
-         $informacion = $this->getConfigFromFile($dir, $fichero);
          // Si tiene información es un backup de SQL, sino de datos de FS
+         $informacion = $this->getConfigFromFile($dir, $fichero);
+
          if ($informacion) {
             $destino = self::backups_path . DIRECTORY_SEPARATOR . self::sql_path . DIRECTORY_SEPARATOR . $_FILES['archivo']['name'];
          } else {
@@ -330,11 +382,12 @@ class backup_restore extends fs_controller {
       try {
          $backup = $manager->createBackup('full');
          if (file_exists($backup)) {
+            $file = str_replace($this->basepath . '/backups/sql/', '', $backup);
             header('Content-Type: application/json');
-            echo json_encode(array('success' => true, 'mensaje' => 'Backup de base de datos realizado correctamente: ' . $backup));
+            echo json_encode(array('success' => true, 'mensaje' => 'Backup de base de datos realizado correctamente: ' . $file));
          } else {
             header('Content-Type: application/json');
-            echo json_encode(array('success' => false, 'mensaje' => 'Algo salió mal realizando el backup de base de datos: ' . $backup));
+            echo json_encode(array('success' => false, 'mensaje' => 'Algo salió mal realizando el backup de base de datos: ' . $file));
          }
       } catch (Exception $e) {
          header('Content-Type: application/json');
@@ -355,7 +408,8 @@ class backup_restore extends fs_controller {
          }
          $backup = $manager->restoreBackup($archivo, $informacion->configuracion);
          if ($backup) {
-            $this->new_error_msg('Ocurrió un error al querer restaurar el backup de base de datos: ' . $backup);
+            $file = str_replace($this->basepath . '/backups/sql/', '', $backup);
+            $this->new_error_msg('Ocurrió un error al querer restaurar el backup de base de datos: ' . $file);
          } else {
             $this->new_message('¡Backup de base de datos restaurado con exito!');
          }
@@ -379,7 +433,9 @@ class backup_restore extends fs_controller {
          $this->template = false;
          header('Content-Type: application/json');
          if (file_exists($this->destino)) {
-            echo json_encode(array('success' => true, 'mensaje' => "Backup de archivos realizado correctamente: " . $this->file));
+            /**/
+            $file = str_replace('backups/archivos/', '', $this->file);
+            echo json_encode(array('success' => true, 'mensaje' => "Backup de archivos realizado correctamente: " . $file));
          } else {
             echo json_encode(array('success' => false, 'mensaje' => "Backup de archivos no realizado!"));
          }

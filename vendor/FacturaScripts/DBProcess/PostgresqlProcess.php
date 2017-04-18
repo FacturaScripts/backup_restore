@@ -24,8 +24,7 @@ namespace FacturaScripts\DBProcess;
 
 /**
  * Description of PostgresqlProcess
- *
- * @author Joe Nilson <joenilson at gmail.com>
+ * Controller para realizar backups de bases de datos en postgresql
  */
 class PostgresqlProcess {
 
@@ -63,16 +62,17 @@ class PostgresqlProcess {
 
    public function createSystemBackup($db) {
       $cmdout = array();
+      $variables_dump = ($this->db_version($db)>94)?"--disable-triggers --if-exists":"--disable-triggers";
       if ($db->dbname) {
          $this->destino = $db->backupdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.zip';
          $this->filename = $this->tempdir . DIRECTORY_SEPARATOR . $db->dbms . '_' . $db->dbname . '_' . $db->year . $db->month . $db->day . '.sql';
          $createdb = ($db->createdb) ? " -C" : "";
          if ($db->onlydata) {
-            $command = "PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --data-only --format=c -c -b {$createdb} --disable-triggers --if-exists > {$this->filename} 2>&1";
+            $command = "PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} --data-only --format=c -c -b {$createdb} $variables_dump > {$this->filename} 2>&1";
             exec($command, $cmdout);
          } else {
             $nodata = ($db->nodata) ? " -s" : "";
-            $command = "PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} {$nodata} --format=c -b -c {$createdb} --disable-triggers --if-exists > {$this->filename} 2>&1";
+            $command = "PGPASSWORD={$db->pass} PGUSER={$db->user} {$db->command} -h {$db->host} {$db->dbname} {$nodata} --format=c -b -c {$createdb} $variables_dump > {$this->filename} 2>&1";
             exec($command, $cmdout);
          }
 
@@ -191,6 +191,7 @@ class PostgresqlProcess {
       $file_info = $this->fileInfo($fileBackup);
       $tmp_file = '';
       $cmdout = null;
+      $variables_restore = ($this->db_version($db)>94)?"--disable-triggers --if-exists":"--disable-triggers";
       if ($file_info == 'sql') {
          $tmp_file = $this->tempdir . DIRECTORY_SEPARATOR . $fileBackup;
          copy($fileBackup, $tmp_file);
@@ -205,7 +206,7 @@ class PostgresqlProcess {
          }
       }
       if (!empty($tmp_file)) {
-         exec("PGPASSWORD={$db->pass} {$db->command} -U {$db->user} -h {$db->host} -p {$db->port} -d {$db->dbname} --disable-triggers --if-exists -c -Fc {$tmp_file} 2>&1", $cmdout);
+         exec("PGPASSWORD={$db->pass} {$db->command} -U {$db->user} -h {$db->host} -p {$db->port} -d {$db->dbname} $variables_restore -c -Fc {$tmp_file} 2>&1", $cmdout);
          if (file_exists($tmp_file)) {
             unlink($tmp_file);
          }
@@ -226,6 +227,18 @@ class PostgresqlProcess {
       } else {
          return false;
       }
+   }
+   
+   /**
+    * 
+    * extraemos de una version de base de datos la mayor y minor version number
+    * para asi saber que parametros aplicar
+    * sobre todo con versiones inferiores a la 9.5.x o 95
+    * @return type integer
+    */
+   private function db_version($db){
+       $version = explode(".",$db->dbms_version);
+       return $version[0].$version[1];
    }
 
 }
