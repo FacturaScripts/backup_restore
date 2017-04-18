@@ -48,12 +48,20 @@ class backup_restore extends fs_controller {
    public $loop_horas;
    public $backup_cron;
    public $backup_programado;
+   /* Opciones para impedir descargar/subir backups */
+   public $disable_download_backups;
+   public $disable_upload_backups;
+   public $disable_download_backups_notset;
+   public $disable_upload_backups_notset;
 
    public function __construct() {
       parent::__construct(__CLASS__, 'Copias de seguridad', 'admin', FALSE, TRUE);
    }
 
    protected function private_core() {
+
+      $this->check_flags();
+
       $this->db_version = $this->db->version();
       //Para garantizar las variables de cada perfil de db debemos de colocar esta opcion
       if (FS_DB_TYPE == 'POSTGRESQL') {
@@ -155,6 +163,9 @@ class backup_restore extends fs_controller {
       $this->fs_backup_files = $this->getFiles(self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path);
    }
 
+   /**
+    * Configura los comándos y parámetros del plugin desde el botón "Configuración"
+    */
    private function configure() {
       //Inicializamos la configuracion
       $this->backup_setup = $this->fsvar->array_get(
@@ -187,6 +198,9 @@ class backup_restore extends fs_controller {
       $this->fsvar->array_save($backup_config);
    }
 
+   /**
+    * Función para programar backups
+    */
    private function programar_backup() {
       $op_backup_cron = \filter_input(INPUT_POST, 'backup_cron');
       $op_backup_programado = \filter_input(INPUT_POST, 'backup_programado');
@@ -204,6 +218,19 @@ class backup_restore extends fs_controller {
       $this->configure();
    }
 
+   /**
+    * Busca el $comando recibido, distinguiendo:
+    *    - Si $backup es TRUE, el comando será para backup
+    *    - Si $backup es FALSE, el comando será para restore
+    * Y $onlydata:
+    *    - Si $onlydata es FALSE, será para estructura + datos
+    *    - Si $onlydata es TRUE, será para sólo datos
+    * 
+    * @param type $comando
+    * @param type $backup
+    * @param type $onlydata
+    * @return boolean
+    */
    private function findCommand($comando, $backup = TRUE, $onlydata = FALSE) {
       if (isset($comando)) {
          $resultado = array();
@@ -226,6 +253,13 @@ class backup_restore extends fs_controller {
       }
    }
 
+   /**
+    * Se busca en determinadas rutas predefinidas
+    * 
+    * @param type $backup
+    * @param type $onlydata
+    * @return string
+    */
    private function osPath($backup = TRUE, $onlydata = FALSE) {
       $paths = array();
       $db_version = explode(" ", $this->db->version());
@@ -256,6 +290,12 @@ class backup_restore extends fs_controller {
       return $paths;
    }
 
+   /**
+    * Devuelve una lista ordenada de los archivos para el directorio indicado
+    * 
+    * @param type $dir
+    * @return \stdClass
+    */
    private function getFiles($dir) {
       $results = array();
       $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
@@ -286,10 +326,21 @@ class backup_restore extends fs_controller {
       return $results;
    }
 
+   /**
+    * Devuelve una url generada por la clase padre
+    *  
+    * @return type
+    */
    public function url() {
       return parent::url();
    }
 
+   /**
+    * Devuelte el tamaño en unidades legibles por humanos
+    * 
+    * @param type $tamano
+    * @return type
+    */
    public function tamano($tamano) {
       /* https://es.wikipedia.org/wiki/Mebibyte */
       $bytes = $tamano;
@@ -299,6 +350,14 @@ class backup_restore extends fs_controller {
       return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $sz[$factor];
    }
 
+   /**
+    * Devuelve el contenido de config.json de dentro de un ZIP si existe, 
+    * y sino devuelve FALSE
+    * 
+    * @param type $dir
+    * @param type $file
+    * @return boolean
+    */
    private function getConfigFromFile($dir, $file) {
       $filePath = $dir . '/' . $file->getFilename();
       if (strcmp(mime_content_type($filePath), 'application/zip') == 0) {
@@ -323,6 +382,16 @@ class backup_restore extends fs_controller {
       }
    }
 
+   /**
+    * Genera un archivo ZIP desde una ruta indicada.
+    * 
+    * Como el zip se guarda dentro de la propia estructura que se recibirá,
+    * se omite dicho directorio en particular.
+    * 
+    * @param type $folder
+    * @param type $zipFile
+    * @param type $exclusiveLength
+    */
    private static function folderToZip($folder, &$zipFile, $exclusiveLength) {
       $handle = opendir($folder);
       while (false !== $f = readdir($handle)) {
@@ -347,6 +416,11 @@ class backup_restore extends fs_controller {
       closedir($handle);
    }
 
+   /**
+    * Procesa la subida de un archivo ZIP indicado por el usuario, y se encarga 
+    * de moverlo a la ruta correcta en función de si se trata de una copia de SQL 
+    * o de datos.
+    */
    private function upload_file() {
       if (is_uploaded_file($_FILES['archivo']['tmp_name'])) {
          // Revisamos si el fichero tiene el json con información
@@ -369,6 +443,11 @@ class backup_restore extends fs_controller {
       }
    }
 
+   /**
+    * Realiza una copia de seguridad de la base de datos indicado por el usuario
+    * 
+    * @param type $info
+    */
    private function backup_db($info) {
       $this->template = false;
       $crear_db = filter_input(INPUT_POST, 'crear_db');
@@ -395,6 +474,11 @@ class backup_restore extends fs_controller {
       }
    }
 
+   /**
+    * Realiza una restauración de la base de datos indicado por el usuario
+    * 
+    * @param type $info
+    */
    private function restore_db($info) {
       $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
       if (file_exists($archivo)) {
@@ -418,6 +502,9 @@ class backup_restore extends fs_controller {
       }
    }
 
+   /**
+    * Realiza una copia de seguridad de los archivos indicado por el usuario
+    */
    private function backup_fs() {
       $this->file = self::backups_path . DIRECTORY_SEPARATOR . self::fs_files_path . DIRECTORY_SEPARATOR . 'FS_' . date("Ymd") . '.zip';
       $this->destino = $this->basepath . DIRECTORY_SEPARATOR . $this->file;
@@ -442,13 +529,31 @@ class backup_restore extends fs_controller {
       }
    }
 
+   /**
+    * Restaura una copia de seguridad de los archivos indicado por el usuario
+    */
    private function restore_fs() {
       $archivo = realpath(\filter_input(INPUT_POST, 'restore_file'));
       if (file_exists($archivo)) {
          // Es necesario eliminar algo antes de restaurar??
          $zip = new ZipArchive;
          if ($zip->open($archivo) === TRUE) {
-            $zip->extractTo($this->basepath);
+            // Listamos todos los archivos del zip
+            $filesOnZip = array();
+            for ($idx = 0; $idx < $zip->numFiles; $idx++) {
+               $filesOnZip[] = $zip->getNameIndex($idx);
+            }
+            // Lista de ficheros que no restauraremos
+            $excludeItems = array('config.php', '.htaccess');
+            // De los archivos en el zip, excluímos  los indicados
+            foreach ($excludeItems as $excludeFile){
+               $pos = array_search($excludeFile, $filesOnZip);
+               if($pos){
+                  unset($filesOnZip[$pos]);
+               }
+            }
+            // Restauramos en la ruta
+            $zip->extractTo($this->basepath, $filesOnZip);
             $zip->close();
 
             $this->new_message('¡Backup de archivos de restaurado con exito!');
@@ -460,6 +565,9 @@ class backup_restore extends fs_controller {
       }
    }
 
+   /**
+    * Borra el archivo indicado por el usuario
+    */
    private function delete_file() {
       $archivo = realpath(\filter_input(INPUT_POST, 'delete_file'));
       if (file_exists($archivo)) {
@@ -474,6 +582,44 @@ class backup_restore extends fs_controller {
          }
       } else {
          $this->new_error_msg('El archivo ' . $archivo . ' no existe!');
+      }
+   }
+
+   /**
+    * Comprobar si la instalación tiene definidas en config.php:
+    *    FS_DISABLE_DOWNLOAD_BACKUP
+    *    FS_DISABLE_UPLOAD_BACKUP
+    * Da igual su valor, lo que se quiere es saber si están o no definidas para 
+    * avisar al usuario y que las añada como TRUE o FALSE
+    */
+   private function check_flags() {
+      $this->disable_download_backups_notset = TRUE;
+      $this->disable_upload_backups_notset = TRUE;
+      $this->disable_download_backups = FALSE;
+      $this->disable_upload_backups = FALSE;
+
+      if (defined('FS_DISABLE_DOWNLOAD_BACKUP_NOTSET')) {
+         $this->disable_download_backups_notset = FS_DISABLE_DOWNLOAD_BACKUP_NOTSET;
+      } else {
+         $this->disable_download_backups_notset = FALSE;
+      }
+
+      if (defined('FS_DISABLE_UPLOAD_BACKUP_NOTSET')) {
+         $this->disable_upload_backups_notset = FS_DISABLE_UPLOAD_BACKUP_NOTSET;
+      } else {
+         $this->disable_upload_backups_notset = FALSE;
+      }
+
+      if (defined('FS_DISABLE_DOWNLOAD_BACKUP')) {
+         $this->disable_download_backups = FS_DISABLE_DOWNLOAD_BACKUP;
+      } else {
+         $this->disable_download_backups_notset = FALSE;
+      }
+
+      if (defined('FS_DISABLE_UPLOAD_BACKUP')) {
+         $this->disable_upload_backups = FS_DISABLE_UPLOAD_BACKUP;
+      } else {
+         $this->disable_upload_backups_notset = FALSE;
       }
    }
 
