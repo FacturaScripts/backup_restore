@@ -25,6 +25,33 @@ require_once __DIR__ . '/../vendor/FacturaScripts/DatabaseManager.php';
 
 use FacturaScripts\DatabaseManager;
 
+/*
+ *  Thanks to:
+ *  http://php.net/manual/en/function.mime-content-type.php#87856
+ */
+if (!function_exists('mime_content_type')) {
+
+   function mime_content_type($filename) {
+      /* Como sólo soportamos copias en ZIP, no necesitamos más tipos */
+      $mime_types = array(
+          'zip' => 'application/zip',
+      );
+
+      $ext = strtolower(array_pop(explode('.', $filename)));
+      if (array_key_exists($ext, $mime_types)) {
+         return $mime_types[$ext];
+      } elseif (function_exists('finfo_open')) {
+         $finfo = finfo_open(FILEINFO_MIME);
+         $mimetype = finfo_file($finfo, $filename);
+         finfo_close($finfo);
+         return $mimetype;
+      } else {
+         return 'application/octet-stream';
+      }
+   }
+
+}
+
 class backup_restore extends fs_controller {
 
    const backups_path = "backups";
