@@ -2,3 +2,5 @@ Permite hacer copias de seguridad de nuestra base de datos, descargarlas, restau
 Permite hacer copias de seguridad de nuestra instalación de FacturaScripts (todos sus archivos), descargarlas, restaurarlas y subirlas en otras instalaciones.
 
 Este plugin se ha desarrollado de forma comunitaria.
+<br/>
+<b>Accesible desde</b>: admin &gt Copias de seguridad

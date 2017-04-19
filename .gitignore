@@ -2,3 +2,4 @@
 /nbproject/private/*
 /.idea/
 .DS_Store
+/vendor/

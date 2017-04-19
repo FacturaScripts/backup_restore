@@ -57,13 +57,13 @@
 </div>
 
 {if="$fsc->disable_download_backups_notset"}
-   <div class="alert alert-danger" role="alert">
+   <div class="alert alert-warning" role="alert">
       <b>ATENCIÓN:</b> En tu <em>config.php</em> no tienes <b>define('FS_DISABLE_DOWNLOAD_BACKUP', FALSE);</b> añadelo tal cual si quieres permitir que cualquiera con acceso a esta página pueda descargar una copia de seguridad.<br/>
       Un usuario que por error tenga permisos para acceder a esta página, podría descargar una copia cuando quisiera, sin embargo, añadiendo <b>define('FS_DISABLE_DOWNLOAD_BACKUP', TRUE);</b> aunque tuviera acceso, no podría descargar nada pero si realizar o restaurar copias de seguridad.
    </div>
 {/if}
 {if="$fsc->disable_upload_backups_notset"}
-   <div class="alert alert-danger" role="alert">
+   <div class="alert alert-warning" role="alert">
       <b>ATENCIÓN:</b> En tu <em>config.php</em> no tienes <b>define('FS_DISABLE_UPLOAD_BACKUP', FALSE);</b> añadelo tal cual si quieres permitir que cualquiera con acceso a esta página pueda subir una copia de seguridad.<br/>
       Un usuario que por error tenga permisos para acceder a esta página, podría subir una copia cuando quisiera, sin embargo, añadiendo <b>define('FS_DISABLE_UPLOAD_BACKUP', TRUE);</b> aunque tuviera acceso, no podría descargar nada pero si realizar o restaurar copias de seguridad.
    </div>

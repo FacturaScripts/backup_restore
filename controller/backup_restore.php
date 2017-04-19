@@ -582,6 +582,8 @@ class backup_restore extends fs_controller {
             // Restauramos en la ruta
             $zip->extractTo($this->basepath, $filesOnZip);
             $zip->close();
+            
+            $this->restore_tmp();
 
             $this->new_message('¡Backup de archivos de restaurado con exito!');
          } else {
@@ -590,6 +592,27 @@ class backup_restore extends fs_controller {
       } else {
          $this->new_error_msg('¡No se indicó un backup de archivos para realizar la restauración!');
       }
+   }
+   
+   /// restaura los archivos importantes del tmp del backup
+   private function restore_tmp() {
+      foreach( scandir(getcwd().'/tmp') as $f) {
+         if( $f.'/' != FS_TMP_NAME AND $f != '.' AND $f != '..' AND is_dir(getcwd().'/tmp/'.$f) ) {
+            copy(getcwd().'/tmp/'.$f.'/config2.ini', getcwd().'/tmp/'.FS_TMP_NAME.'config2.ini');
+            copy(getcwd().'/tmp/'.$f.'/enabled_plugins.list', getcwd().'/tmp/'.FS_TMP_NAME.'enabled_plugins.list');
+            break;
+         }
+      }
+      
+      /// borramos los archivos php del directorio tmp
+      foreach( scandir(getcwd().'/tmp/'.FS_TMP_NAME) as $f)
+      {
+         if( substr($f, -4) == '.php' ) {
+            unlink('tmp/'.FS_TMP_NAME.$f);
+         }
+      }
+      
+      $this->cache->clean();
    }
 
    /**
