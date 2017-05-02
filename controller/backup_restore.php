@@ -74,12 +74,11 @@ class backup_restore extends fs_controller {
    public $sql_backup_files;
    public $loop_horas;
    public $backup_cron;
-   public $backup_programado;
    /* Opciones para impedir descargar/subir backups */
+   public $disable_configure_backups;
+   public $disable_delete_backups;
    public $disable_download_backups;
    public $disable_upload_backups;
-   public $disable_download_backups_notset;
-   public $disable_upload_backups_notset;
 
    public function __construct() {
       parent::__construct(__CLASS__, 'Copias de seguridad', 'admin', FALSE, TRUE);
@@ -88,6 +87,10 @@ class backup_restore extends fs_controller {
    protected function private_core() {
 
       $this->check_flags();
+
+      if (!$this->user->admin) {
+         $this->new_error_msg('Sólo un administrador puede realizar todas las acciones en esta página.');
+      }
 
       $this->db_version = $this->db->version();
       //Para garantizar las variables de cada perfil de db debemos de colocar esta opcion
@@ -133,7 +136,6 @@ class backup_restore extends fs_controller {
       $this->restore_comando = $this->backup_setup['restore_comando'];
       $this->restore_comando_data = $this->backup_setup['restore_comando_data'];
       $this->backup_cron = $this->backup_setup['backup_cron'];
-      $this->backup_programado = $this->backup_setup['backup_programado'];
       $accion = filter_input(INPUT_POST, 'accion');
       if ($accion) {
          $info = array(
@@ -156,6 +158,7 @@ class backup_restore extends fs_controller {
                break;
             case "restaurardb":
                $this->restore_db($info);
+               $this->clean_cache();
             case "configuracion":
                $this->configure();
                break;
@@ -164,6 +167,7 @@ class backup_restore extends fs_controller {
                break;
             case "restaurarfs":
                $this->restore_fs();
+               $this->clean_cache();
                break;
             case "eliminar":
                $this->delete_file();
@@ -179,7 +183,6 @@ class backup_restore extends fs_controller {
          $this->restore_comando = $this->backup_setup['restore_comando'];
          $this->restore_comando_data = $this->backup_setup['restore_comando_data'];
          $this->backup_cron = $this->backup_setup['backup_cron'];
-         $this->backup_programado = $this->backup_setup['backup_programado'];
       }
 
       //Verificamos si existe un backup con la fecha actual para mostrarlo en el view
@@ -202,7 +205,6 @@ class backup_restore extends fs_controller {
           'restore_comando_data' => '',
           'backup_ultimo_proceso' => '',
           'backup_cron' => '',
-          'backup_programado' => '',
           'backup_procesandose' => 'FALSE',
           'backup_usuario_procesando' => ''
               ), TRUE
@@ -230,12 +232,9 @@ class backup_restore extends fs_controller {
     */
    private function programar_backup() {
       $op_backup_cron = \filter_input(INPUT_POST, 'backup_cron');
-      $op_backup_programado = \filter_input(INPUT_POST, 'backup_programado');
       $backup_cron = ($op_backup_cron == 'TRUE') ? "TRUE" : "FALSE";
-      $backup_programado = $op_backup_programado;
       $backup_config = array(
           'backup_cron' => $backup_cron,
-          'backup_programado' => $backup_programado
       );
       if ($this->fsvar->array_save($backup_config)) {
          $this->new_message('¡Backup programado correctamente!');
@@ -573,16 +572,16 @@ class backup_restore extends fs_controller {
             // Lista de ficheros que no restauraremos
             $excludeItems = array('config.php', '.htaccess');
             // De los archivos en el zip, excluímos  los indicados
-            foreach ($excludeItems as $excludeFile){
+            foreach ($excludeItems as $excludeFile) {
                $pos = array_search($excludeFile, $filesOnZip);
-               if($pos){
+               if ($pos) {
                   unset($filesOnZip[$pos]);
                }
             }
             // Restauramos en la ruta
             $zip->extractTo($this->basepath, $filesOnZip);
             $zip->close();
-            
+
             $this->restore_tmp();
 
             $this->new_message('¡Backup de archivos de restaurado con exito!');
@@ -593,25 +592,24 @@ class backup_restore extends fs_controller {
          $this->new_error_msg('¡No se indicó un backup de archivos para realizar la restauración!');
       }
    }
-   
+
    /// restaura los archivos importantes del tmp del backup
    private function restore_tmp() {
-      foreach( scandir(getcwd().'/tmp') as $f) {
-         if( $f.'/' != FS_TMP_NAME AND $f != '.' AND $f != '..' AND is_dir(getcwd().'/tmp/'.$f) ) {
-            copy(getcwd().'/tmp/'.$f.'/config2.ini', getcwd().'/tmp/'.FS_TMP_NAME.'config2.ini');
-            copy(getcwd().'/tmp/'.$f.'/enabled_plugins.list', getcwd().'/tmp/'.FS_TMP_NAME.'enabled_plugins.list');
+      foreach (scandir(getcwd() . '/tmp') as $f) {
+         if ($f . '/' != FS_TMP_NAME AND $f != '.' AND $f != '..' AND is_dir(getcwd() . '/tmp/' . $f)) {
+            copy(getcwd() . '/tmp/' . $f . '/config2.ini', getcwd() . '/tmp/' . FS_TMP_NAME . 'config2.ini');
+            copy(getcwd() . '/tmp/' . $f . '/enabled_plugins.list', getcwd() . '/tmp/' . FS_TMP_NAME . 'enabled_plugins.list');
             break;
          }
       }
-      
+
       /// borramos los archivos php del directorio tmp
-      foreach( scandir(getcwd().'/tmp/'.FS_TMP_NAME) as $f)
-      {
-         if( substr($f, -4) == '.php' ) {
-            unlink('tmp/'.FS_TMP_NAME.$f);
+      foreach (scandir(getcwd() . '/tmp/' . FS_TMP_NAME) as $f) {
+         if (substr($f, -4) == '.php') {
+            unlink('tmp/' . FS_TMP_NAME . $f);
          }
       }
-      
+
       $this->cache->clean();
    }
 
@@ -637,39 +635,46 @@ class backup_restore extends fs_controller {
 
    /**
     * Comprobar si la instalación tiene definidas en config.php:
+    *    FS_DISABLE_CONFIGURE_BACKUP
+    *    FS_DISABLE_DELETE_BACKUP
     *    FS_DISABLE_DOWNLOAD_BACKUP
     *    FS_DISABLE_UPLOAD_BACKUP
     * Da igual su valor, lo que se quiere es saber si están o no definidas para 
     * avisar al usuario y que las añada como TRUE o FALSE
     */
    private function check_flags() {
-      $this->disable_download_backups_notset = TRUE;
-      $this->disable_upload_backups_notset = TRUE;
+      $this->disable_configure_backups = FALSE;
+      $this->disable_delete_backups = FALSE;
       $this->disable_download_backups = FALSE;
       $this->disable_upload_backups = FALSE;
 
-      if (defined('FS_DISABLE_DOWNLOAD_BACKUP_NOTSET')) {
-         $this->disable_download_backups_notset = FS_DISABLE_DOWNLOAD_BACKUP_NOTSET;
-      } else {
-         $this->disable_download_backups_notset = FALSE;
+      if (defined('FS_DISABLE_CONFIGURE_BACKUP')) {
+         $this->disable_configure_backups = FS_DISABLE_CONFIGURE_BACKUP;
       }
 
-      if (defined('FS_DISABLE_UPLOAD_BACKUP_NOTSET')) {
-         $this->disable_upload_backups_notset = FS_DISABLE_UPLOAD_BACKUP_NOTSET;
-      } else {
-         $this->disable_upload_backups_notset = FALSE;
+      if (defined('FS_DISABLE_DELETE_BACKUP')) {
+         $this->disable_delete_backups = FS_DISABLE_DELETE_BACKUP;
       }
 
       if (defined('FS_DISABLE_DOWNLOAD_BACKUP')) {
          $this->disable_download_backups = FS_DISABLE_DOWNLOAD_BACKUP;
-      } else {
-         $this->disable_download_backups_notset = FALSE;
       }
 
       if (defined('FS_DISABLE_UPLOAD_BACKUP')) {
          $this->disable_upload_backups = FS_DISABLE_UPLOAD_BACKUP;
-      } else {
-         $this->disable_upload_backups_notset = FALSE;
+      }
+   }
+
+   private function clean_cache() {
+      /// borramos los archivos php del directorio tmp
+      foreach (scandir(getcwd() . '/tmp/' . FS_TMP_NAME) as $f) {
+         if (substr($f, -4) == '.php') {
+            unlink('tmp/' . FS_TMP_NAME . $f);
+         }
+      }
+
+      if ($this->cache->clean()) {
+         $this->new_message("Cache limpiada correctamente.");
       }
    }
 
